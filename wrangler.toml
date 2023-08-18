@@ -1,0 +1,7 @@
+# Top-level configuration
+name = "ip"
+main = "index.js"
+compatibility_date = "2023-08-20"
+
+[site]
+bucket = "./public"
