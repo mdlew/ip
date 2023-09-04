@@ -11,7 +11,7 @@ import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflar
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
 const assetManifest = JSON.parse(manifestJSON)
 
-let grads = [
+const grads = [
   [
     { color: "00000c", position: 0 },
     { color: "00000c", position: 0 },
@@ -124,6 +124,23 @@ let grads = [
     { color: "150800", position: 100 },
   ],
 ];
+const heatIndexHumidity = [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+const heatIndexTemp = [80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110];
+const heatIndexTab = [
+  [80, 81, 83, 85, 88, 91, 94, 97, 101, 105, 109, 114, 119, 124, 130, 136],
+  [80, 82, 84, 87, 89, 93, 96, 100, 104, 109, 114, 119, 124, 130, 137, 999],
+  [80, 83, 85, 88, 91, 95, 99, 103, 108, 113, 118, 124, 131, 137, 999, 999],
+  [81, 84, 86, 89, 93, 97, 101, 106, 112, 117, 124, 130, 137, 999, 999, 999],
+  [82, 84, 88, 91, 95, 100, 105, 110, 116, 123, 129, 137, 999, 999, 999, 999],
+  [82, 85, 89, 93, 98, 103, 108, 114, 121, 128, 136, 999, 999, 999, 999, 999],
+  [83, 86, 90, 95, 100, 105, 112, 119, 126, 134, 999, 999, 999, 999, 999, 999],
+  [84, 88, 92, 97, 103, 109, 116, 124, 132, 999, 999, 999, 999, 999, 999, 999],
+  [84, 89, 94, 100, 106, 113, 121, 129, 999, 999, 999, 999, 999, 999, 999, 999],
+  [85, 90, 96, 102, 110, 117, 126, 135, 999, 999, 999, 999, 999, 999, 999, 999],
+  [86, 91, 98, 105, 113, 122, 131, 999, 999, 999, 999, 999, 999, 999, 999, 999],
+  [86, 93, 100, 108, 117, 127, 999, 999, 999, 999, 999, 999, 999, 999, 999, 999],
+  [87, 95, 103, 112, 121, 132, 999, 999, 999, 999, 999, 999, 999, 999, 999, 999],
+];
 async function toCSSGradient(hour) {
   let css = "linear-gradient(to bottom,";
   const data = grads[hour];
@@ -172,7 +189,7 @@ export default {
           },
         )
       } catch (e) {
-        let pathname = url.pathname;
+        const pathname = url.pathname;
         return new Response(`"${pathname}" not found`, {
           status: 404,
           statusText: "not found",
@@ -202,10 +219,10 @@ export default {
           }`;
 
       const timezone = request.cf.timezone;
-      let localized_date = new Date(
+      const localized_date = new Date(
         new Date().toLocaleString("en-US", { timeZone: timezone })
       );
-      let hour = localized_date.getHours();
+      const hour = localized_date.getHours();
 
       html_style += "body{background:" + (await toCSSGradient(hour)) + ";}";
       html_style += "h1{color:#f6821f;}";
@@ -229,7 +246,7 @@ export default {
       try {
         // WAQI API setup
         const token = env.waqiToken; //Use a token from https://aqicn.org/api/
-        let endpoint = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${token}`;
+        const endpoint = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${token}`;
         const init = {
           headers: {
             "content-type": "application/json;charset=UTF-8",
@@ -238,22 +255,54 @@ export default {
 
         const response = await fetch(endpoint, init);
         const content = await response.json();
+        const tempF = parseFloat(content.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
+        const humidity = content.data.iaqi.h?.v;
+        const windSpeed = parseFloat(content.data.iaqi.w?.v) * 2.23694; // m/s to mph
 
-        html_content += `<p> Temperature: ` + nf.format(parseFloat(content.data.iaqi.t?.v) * 9 / 5 + 32) + `°F (${nf.format(content.data.iaqi.t?.v)} °C)</p>`;
-        html_content += `<p> Relative humidity: ${content.data.iaqi.h?.v}&percnt;</p>`;
-        html_content += `<p> AQI: ${content.data.aqi}</p>`;
-        html_content += `<p> PM<sub>2.5</sub> level: ${content.data.iaqi.pm25?.v}</p>`;
-        html_content += `<p> PM<sub>10</sub> level: ${content.data.iaqi.pm10?.v}</p>`;
-        html_content += `<p> O<sub>3</sub> (ozone) level: ${content.data.iaqi.o3?.v}</p>`;
-        html_content += `<p> NO<sub>2</sub> level: ${content.data.iaqi.no2?.v}</p>`;
-        html_content += `<p> SO<sub>2</sub> level: ${content.data.iaqi.so2?.v}</p>`;
-        html_content += `<p> CO level: ${content.data.iaqi.co?.v}</p>`;
-        html_content += `<p> Sensor data from <a href="${content.data.city.url}">${content.data.city.name}</a>, measured at ${content.data.time.s}</p>`;
-        html_content += `<p><iframe title="Example Primary Pollutant" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
+        // compute heat index if it's warm enough
+        let heatIndex = 0.5 * (tempF + 61.0 + ((tempF-68.0)*1.2) + (humidity*0.094));
+        if ((tempF + heatIndex)/2 > 80) {
+          heatIndex = -42.379 + 2.04901523 * tempF + 10.14333127 * humidity - .22475541 * tempF * humidity - .00683783 * tempF * tempF - .05481717 * humidity * humidity + .00122874 * tempF * tempF * humidity + .00085282 * tempF * humidity * humidity - .00000199 * tempF * tempF * humidity * humidity;
+          if (humidity < 13 && tempF > 80 && tempF < 112) {
+            heatIndex -= ((13 - humidity) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17); // low humidity correction
+          }
+          if (humidity > 85 && tempF > 80 && tempF < 87) {
+            heatIndex += ((humidity - 85) / 10) * ((87 - tempF) / 5); // high humidity correction
+          }
+        }
+        // compute wind chill
+        const windChill = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeed, 0.16) + 0.4275 * tempF * Math.pow(windSpeed, 0.16);
+
+        html_content += `<p> Temperature: ` + nf.format(tempF) + `°F (${nf.format(content.data.iaqi.t?.v)} °C)</p>`;
+        // if within range, print heat index
+        //if (tempF > 80 && humidity > 40) {
+        if (heatIndex > 80) {
+          //const humidityIdx = heatIndexHumidity.findIndex((element) => element > humidity);
+          //const tempIdx = heatIndexTemp.findIndex((element) => element > tempF);
+          //const humidityGrad = (heatIndexTab[humidityIdx][tempIdx-1]-heatIndexTab[humidityIdx-1][tempIdx-1])/(heatIndexHumidity[humidityIdx]-heatIndexHumidity[humidityIdx-1]);
+          //const tempGrad = (heatIndexTab[humidityIdx-1][tempIdx]-heatIndexTab[humidityIdx-1][tempIdx-1])/(heatIndexTemp[tempIdx]-heatIndexTemp[tempIdx-1]);
+          //const heatIndex = heatIndexTab[humidityIdx-1][tempIdx-1] + humidityGrad*(humidity - heatIndexHumidity[humidityIdx-1]) + tempGrad*(tempF - heatIndexTemp[tempIdx-1]);
+          html_content += `<p> Feels like: ${nf.format(heatIndex)}°F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
+        }
+        // if within range, print wind chill
+        if (windChill < 40) {
+          html_content += `<p> Feels like: ${nf.format(windChill)}°F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
+        }
+
+        html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
+        html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
+        html_content += `<p> Overall AQI: ${content.data.aqi}</p>`;
+        html_content += `<p> PM<sub>2.5</sub> AQI: ${content.data.iaqi.pm25?.v}</p>`;
+        html_content += `<p> PM<sub>10</sub> AQI: ${content.data.iaqi.pm10?.v}</p>`;
+        html_content += `<p> O<sub>3</sub> (ozone) AQI: ${content.data.iaqi.o3?.v}</p>`;
+        html_content += `<p> NO<sub>2</sub> AQI: ${content.data.iaqi.no2?.v}</p>`;
+        html_content += `<p> SO<sub>2</sub> AQI: ${content.data.iaqi.so2?.v}</p>`;
+        html_content += `<p> CO AQI: ${content.data.iaqi.co?.v}</p>`;
+        html_content += `<p> Sensor data from <a href="${content.data.city.url}">${content.data.city.name}</a>, measured at ${content.data.time.s} (${content.data.time.tz})</p>`;
       } catch (e) {
         html_content += `<p>Unexpected error: ` + e + `</p>`;
       }
-
+      html_content += `<p><iframe title="Example Primary Pollutant" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
       html_content += "<h1>Browser 🗔</h1>";
       html_content += "<p> User Agent: " + clientUA + "</p>";
@@ -265,6 +314,7 @@ export default {
       <html lang="en">
       <head>
         <title>IP Geolocation 🌐 + Weather 🌦</title>
+        <meta name="viewport" content="width=device-width" />
         <link rel="icon" href="./favicon.svg" type="image/svg+xml" sizes="any">
         <link rel="apple-touch-icon" href="./apple-touch-icon.png">
         <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
