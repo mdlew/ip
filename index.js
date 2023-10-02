@@ -234,7 +234,7 @@ export default {
 
       html_content += `<p> Public IP: ` + clientIP + ` (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>`;
       html_content += `<p> ISP: ` + clientISP + `, ASN: ` + clientASN + ` (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>`;
-      html_content += `<iframe width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=` + (parseFloat(longitude) - 0.5) + `%2C` + (parseFloat(latitude) - 0.6) + `%2C` + (parseFloat(longitude) + 0.5) + `%2C` + (parseFloat(latitude) + 0.6) + `&amp;layer=mapnik&amp;marker=` + latitude + `%2C` + longitude + `" style="border: 1px solid black"></iframe>`;
+      html_content += `<iframe width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=` + (parseFloat(longitude) - 0.35) + `%2C` + (parseFloat(latitude) - 0.35) + `%2C` + (parseFloat(longitude) + 0.35) + `%2C` + (parseFloat(latitude) + 0.35) + `&amp;layer=mapnik&amp;marker=` + latitude + `%2C` + longitude + `" style="border: 1px solid black"></iframe>`;
       html_content += `<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=` + latitude + `&amp;mlon=` + longitude + `#map=9/` + latitude + `/` + longitude + `">(` + latitude + `, ` + longitude + `)</a></p>`;
       html_content += "<p> City: " + request.cf.city + ", MetroCode: " + request.cf.metroCode + "</p>";
       html_content += "<p> Region: " + request.cf.region + ", RegionCode: " + request.cf.regionCode + ", PostalCode: " + request.cf.postalCode + "</p>";
