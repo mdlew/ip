@@ -274,7 +274,7 @@ export default {
 
       html_content += `<p> Public IP: ` + clientIP + ` (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>`;
       html_content += `<p> ISP: ` + clientISP + `, ASN: ` + clientASN + ` (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>`;
-      html_content += `<iframe width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=` + (parseFloat(longitude) - 0.35) + `%2C` + (parseFloat(latitude) - 0.35) + `%2C` + (parseFloat(longitude) + 0.35) + `%2C` + (parseFloat(latitude) + 0.35) + `&amp;layer=mapnik&amp;marker=` + latitude + `%2C` + longitude + `" style="border: 1px solid black"></iframe>`;
+      html_content += `<iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=` + (parseFloat(longitude) - 0.35) + `%2C` + (parseFloat(latitude) - 0.35) + `%2C` + (parseFloat(longitude) + 0.35) + `%2C` + (parseFloat(latitude) + 0.35) + `&amp;layer=mapnik&amp;marker=` + latitude + `%2C` + longitude + `" style="border: 1px solid black; max-width: 100%;"></iframe>`;
       html_content += `<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=` + latitude + `&amp;mlon=` + longitude + `#map=9/` + latitude + `/` + longitude + `">(` + latitude + `, ` + longitude + `)</a></p>`;
       html_content += "<p> City: " + request.cf.city + ", MetroCode: " + request.cf.metroCode + "</p>";
       html_content += "<p> Region: " + request.cf.region + ", RegionCode: " + request.cf.regionCode + ", PostalCode: " + request.cf.postalCode + "</p>";
@@ -285,23 +285,46 @@ export default {
       html_content += "<h1>Weather 🌦</h1>";
       try {
         // WAQI API setup
-        const token = env.waqiToken; //Use a token from https://aqicn.org/api/
-        const endpoint = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${token}`;
-        const init = {
+        const token = env.waqiToken; // Use a token from https://aqicn.org/api/
+        const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${token}`;
+        const waqiRequestInit = {
           headers: {
             "content-type": "application/json;charset=UTF-8",
           },
         };
+        // https://www.weather.gov/documentation/services-web-api API setup
+        const agent = env.nwsAgent; // ID to send to weather.gov API
+        const nwsApiPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
+        const nwsRequestInit = {
+          headers: {
+            "accept": "application/geo+json",
+            "User-Agent": agent,
+          },
+        };
 
-        const response = await fetch(endpoint, init);
-        const content = await response.json();
-        const tempF = parseFloat(content.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
-        const humidity = content.data.iaqi.h?.v;
-        const windSpeed = parseFloat(content.data.iaqi.w?.v) * 2.23694; // m/s to mph
+        // issue concurrent requests to WAQI and NWS APIs
+        const [waqiResponse, nwsPointsResponse] = await Promise.all([
+          fetch(waqiApiRequestUrl, waqiRequestInit),
+          fetch(nwsApiPointsRequestUrl, nwsRequestInit),
+        ]);
+        const [waqiContent, nwsPointsContent] = await Promise.all([
+          waqiResponse.json(),
+          nwsPointsResponse.json(),
+        ]);
+        let nwsForecastResponse = null;
+        let nwsForecastContent = null;
+        if ("properties" in nwsPointsContent) {
+          nwsForecastResponse = await fetch(nwsPointsContent.properties.forecast, nwsRequestInit);
+          nwsForecastContent = await nwsForecastResponse.json();
+        }
+
+        const tempF = parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
+        const humidity = waqiContent.data.iaqi.h?.v;
+        const windSpeed = parseFloat(waqiContent.data.iaqi.w?.v) * 2.23694; // m/s to mph
 
         // compute heat index if it's warm enough
-        let heatIndex = 0.5 * (tempF + 61.0 + ((tempF-68.0)*1.2) + (humidity*0.094));
-        if ((tempF + heatIndex)/2 > 80) {
+        let heatIndex = 0.5 * (tempF + 61.0 + ((tempF - 68.0) * 1.2) + (humidity * 0.094));
+        if ((tempF + heatIndex) / 2 > 80) {
           heatIndex = -42.379 + 2.04901523 * tempF + 10.14333127 * humidity - .22475541 * tempF * humidity - .00683783 * tempF * tempF - .05481717 * humidity * humidity + .00122874 * tempF * tempF * humidity + .00085282 * tempF * humidity * humidity - .00000199 * tempF * tempF * humidity * humidity;
           if (humidity < 13 && tempF > 80 && tempF < 112) {
             heatIndex -= ((13 - humidity) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17); // low humidity correction
@@ -313,7 +336,7 @@ export default {
         // compute wind chill
         const windChill = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeed, 0.16) + 0.4275 * tempF * Math.pow(windSpeed, 0.16);
 
-        html_content += `<p> Temperature: ` + nf.format(tempF) + `°F (${nf.format(content.data.iaqi.t?.v)} °C)</p>`;
+        html_content += `<p> Temperature: ` + nf.format(tempF) + `°F (${nf.format(waqiContent.data.iaqi.t?.v)} °C)</p>`;
         // if within range, print heat index
         //if (tempF > 80 && humidity > 40) {
         if (heatIndex > 80) {
@@ -331,18 +354,26 @@ export default {
 
         html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
         html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-        html_content += `<p> Overall AQI: ${content.data.aqi}</p>`;
-        html_content += `<p> PM<sub>2.5</sub> AQI: ${content.data.iaqi.pm25?.v}</p>`;
-        html_content += `<p> PM<sub>10</sub> AQI: ${content.data.iaqi.pm10?.v}</p>`;
-        html_content += `<p> O<sub>3</sub> (ozone) AQI: ${content.data.iaqi.o3?.v}</p>`;
-        html_content += `<p> NO<sub>2</sub> AQI: ${content.data.iaqi.no2?.v}</p>`;
-        html_content += `<p> SO<sub>2</sub> AQI: ${content.data.iaqi.so2?.v}</p>`;
-        html_content += `<p> CO AQI: ${content.data.iaqi.co?.v}</p>`;
-        html_content += `<p> Sensor data from <a href="${content.data.city.url}">${content.data.city.name}</a>, measured at ${content.data.time.s} (${content.data.time.tz})</p>`;
+        if ("properties" in nwsPointsContent) {
+          html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
+          for (let i=0; i<3; i++) {
+            html_content += `<li>${nwsForecastContent.properties.periods[i].name}: ${nwsForecastContent.properties.periods[i].detailedForecast}</li>`;
+          }
+          html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsContent.properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsContent.properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+        }
+        html_content += `<p> Overall AQI: ${waqiContent.data.aqi}</p>`;
+        html_content += `<p> PM<sub>2.5</sub> AQI: ${waqiContent.data.iaqi.pm25?.v}</p>`;
+        html_content += `<p> PM<sub>10</sub> AQI: ${waqiContent.data.iaqi.pm10?.v}</p>`;
+        html_content += `<p> O<sub>3</sub> (ozone) AQI: ${waqiContent.data.iaqi.o3?.v}</p>`;
+        html_content += `<p> NO<sub>2</sub> AQI: ${waqiContent.data.iaqi.no2?.v}</p>`;
+        html_content += `<p> SO<sub>2</sub> AQI: ${waqiContent.data.iaqi.so2?.v}</p>`;
+        html_content += `<p> CO AQI: ${waqiContent.data.iaqi.co?.v}</p>`;
+        html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiContent.data.time.s} (${waqiContent.data.time.tz})</p>`;
       } catch (e) {
         html_content += `<p>Unexpected error: ` + e + `</p>`;
+        html_content += `<p>` + e.stack + `</p>`;
       }
-      html_content += `<p><iframe title="Example Primary Pollutant" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
+      html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
       html_content += "<h1>Browser 🗔</h1>";
       html_content += "<p> User Agent: " + clientUA + "</p>";
@@ -355,17 +386,20 @@ export default {
       <head>
         <title>IP Geolocation 🌐 + Weather 🌦</title>
         <meta name="viewport" content="width=device-width" />
-        <link rel="icon" href="./favicon.svg" type="image/svg+xml" sizes="any">
-        <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
+        <link rel="apple-touch-icon" href="/favicon.png">
         <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
         <style> ${html_style} </style>
       </head>
       <body>
         <div id="container">
         ${html_content}
-        <p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
         </div>
       </body>
+      <footer>
+        <p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
+        <p><a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
+      </footer>
       </html>`;
 
 

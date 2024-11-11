@@ -1,5 +1,9 @@
 # ip
 
- IP Geolocation, weather, and browser info
+IP Geolocation, weather, and browser info using Cloudflare workers. [Check it out!](https://ip.lewlab.com)
 
-Script adapted from [Cloudflare](https://developers.cloudflare.com/workers/examples/) and [NikSec](https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/) examples.
+![Deploy status](https://github.com/mdlew/ip/actions/workflows/deploy.yml/badge.svg)
+
+Script adapted from: 
+- [Cloudflare examples](https://developers.cloudflare.com/workers/examples/) 
+- [NikSec ip check tool](https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/)

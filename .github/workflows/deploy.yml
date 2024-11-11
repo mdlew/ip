@@ -19,3 +19,4 @@ jobs:
           preCommands: |
             echo "[vars]" >> wrangler.toml
             echo "waqiToken = \"${{ secrets.WAQI_TOKEN }}\"" >> wrangler.toml
+            echo "nwsAgent = \"${{ secrets.NWS_AGENT }}\"" >> wrangler.toml
