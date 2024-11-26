@@ -11,8 +11,16 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
+/* @cloudflare/workers-types package names are included in tsconfig.json */
 import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
+
+export interface Env {
+	WAQI_TOKEN: string;
+	NWS_AGENT: string;
+	AIRNOW_KEY: string;
+	__STATIC_CONTENT: KVNamespace;
+}
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -159,13 +167,46 @@ export default {
 			}
 			return css + ")";
 		}
+		async function toEmoji(AQI: number) {
+			if (AQI === undefined) {
+				return "";	// If undefined, return empty string
+			}
+			else if (AQI <= 50) {
+				return "🟢";  // Good
+			}
+			else if (AQI <= 100) {
+				return "🟡";  // Moderate
+			}
+			else if (AQI <= 150) {
+				return "🟠";  // Unhealthy for Sensitive Groups
+			}
+			else if (AQI <= 200) {
+				return "🔴";  // Unhealthy
+			}
+			else if (AQI <= 300) {
+				return "🟣";  // Very Unhealthy
+			}
+			else {
+				return "⚫";  // Hazardous
+			}
+		}
 		const nf = new Intl.NumberFormat("en-US", {
 			maximumFractionDigits: 1,
 		});
+		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
+		const PI = Math.PI;
+		const DEG2RAD = PI/180;
+		const R =  6378137.0;
+		async function lat2y(lat: number) { 
+			return Math.log(Math.tan(PI/4 + lat * DEG2RAD / 2)) * R
+		}
+		async function lon2x(lon: number) { 
+			return lon * DEG2RAD * R; 
+		}
 
 		// Return a new Response based on a URL's pathname
 		const FAVICON_URL = ["/favicon.ico", "/favicon.svg"];
-		const url = new URL(request.url);
+		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
 		// return static favicon asset
 		if (FAVICON_URL.includes(url.pathname)) {
@@ -252,13 +293,10 @@ export default {
 			const tlsVersion = request.cf.tlsVersion;
 
 			let html_style = `
-	  /* html{width:100vw; height:100vh;} */
 	  body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:white; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
 	  #container {
 		display: flex;
 		flex-direction:column;
-		/* align-items: center; */
-		/* justify-content: center; */
 		min-height: 100%;
 	  }`;
 
@@ -279,7 +317,7 @@ export default {
 			html_content += `<p> Public IP: ` + clientIP + ` (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>`;
 			html_content += `<p> ISP: ` + clientISP + `, ASN: ` + clientASN + ` (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>`;
 			html_content += `<iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=` + (parseFloat(longitude) - 0.35) + `%2C` + (parseFloat(latitude) - 0.35) + `%2C` + (parseFloat(longitude) + 0.35) + `%2C` + (parseFloat(latitude) + 0.35) + `&amp;layer=mapnik&amp;marker=` + latitude + `%2C` + longitude + `" style="border: 1px solid black; max-width: 100%;"></iframe>`;
-			html_content += `<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=` + latitude + `&amp;mlon=` + longitude + `#map=9/` + latitude + `/` + longitude + `">(` + latitude + `, ` + longitude + `)</a></p>`;
+			html_content += `<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a></p>`;
 			html_content += "<p> City: " + request.cf.city + ", MetroCode: " + request.cf.metroCode + "</p>";
 			html_content += "<p> Region: " + request.cf.region + ", RegionCode: " + request.cf.regionCode + ", PostalCode: " + request.cf.postalCode + "</p>";
 			html_content += "<p> Country: " + request.cf.country + ",  Continent: " + request.cf.continent + "</p>";
@@ -288,38 +326,80 @@ export default {
 
 			html_content += "<h1>Weather 🌦</h1>";
 			try {
-				// WAQI API setup
-				const token = env.waqiToken; // Use a token from https://aqicn.org/api/
-				const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${token}`;
+				// WAQI API setup https://aqicn.org/api/
+				const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
 				const waqiRequestInit = {
 					headers: {
 						"content-type": "application/json;charset=UTF-8",
 					},
 				};
 				// https://www.weather.gov/documentation/services-web-api API setup
-				const agent = env.nwsAgent; // ID to send to weather.gov API
 				const nwsApiPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
 				const nwsRequestInit = {
 					headers: {
 						"accept": "application/geo+json",
-						"User-Agent": agent,
+						"User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
+					},
+				};
+				// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
+				const airnowApiRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+				const airnowRequestInit = {
+					headers: {
+						"content-type": "application/json;charset=UTF-8",
 					},
 				};
 
 				// issue concurrent requests to WAQI and NWS APIs
-				const [waqiResponse, nwsPointsResponse] = await Promise.all([
+				const [waqiResponse, nwsPointsResponse, airnowResponse] = await Promise.all([
 					fetch(waqiApiRequestUrl, waqiRequestInit),
 					fetch(nwsApiPointsRequestUrl, nwsRequestInit),
+					fetch(airnowApiRequestUrl, airnowRequestInit),
 				]);
-				const [waqiContent, nwsPointsContent] = await Promise.all([
+				const [waqiContent, nwsPointsContent, airnowContent] = await Promise.all([
 					waqiResponse.json(),
 					nwsPointsResponse.json(),
+					airnowResponse.json(),
 				]);
 				let nwsForecastResponse = null;
 				let nwsForecastContent = null;
 				if ("properties" in nwsPointsContent) {
 					nwsForecastResponse = await fetch(nwsPointsContent.properties.forecast, nwsRequestInit);
 					nwsForecastContent = await nwsForecastResponse.json();
+				}
+				// parse AirNow response
+				const airnowPM25 = {
+					AQI: undefined, 
+					category: undefined
+				};
+				const airnowPM10 = {
+					AQI: undefined, 
+					category: undefined
+				};
+				const airnowO3 = {
+					AQI: undefined, 
+					category: undefined
+				};
+				const airnowOverall = {
+					AQI: undefined, 
+					category: undefined
+				};
+				for (let i = 0; i < airnowContent.length; i++) {
+					if (i === 0 || airnowContent[i].AQI > airnowOverall.AQI) {
+						airnowOverall.AQI = airnowContent[i].AQI;
+						airnowOverall.category = airnowContent[i].Category.Name;
+					}
+					if (airnowContent[i].ParameterName === "PM2.5") {
+						airnowPM25.AQI = airnowContent[i].AQI;
+						airnowPM25.category = airnowContent[i].Category.Name;
+					} 
+					else if (airnowContent[i].ParameterName === "PM10") {
+						airnowPM10.AQI = airnowContent[i].AQI;
+						airnowPM10.category = airnowContent[i].Category.Name;
+					}
+					else if (airnowContent[i].ParameterName === "O3") {
+						airnowO3.AQI = airnowContent[i].AQI;
+						airnowO3.category = airnowContent[i].Category.Name;
+					}
 				}
 
 				const tempF = parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
@@ -365,19 +445,48 @@ export default {
 					}
 					html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsContent.properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsContent.properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
 				}
-				html_content += `<p> Overall AQI: ${waqiContent.data.aqi}</p>`;
-				html_content += `<p> PM<sub>2.5</sub> AQI: ${waqiContent.data.iaqi.pm25?.v}</p>`;
-				html_content += `<p> PM<sub>10</sub> AQI: ${waqiContent.data.iaqi.pm10?.v}</p>`;
-				html_content += `<p> O<sub>3</sub> (ozone) AQI: ${waqiContent.data.iaqi.o3?.v}</p>`;
-				html_content += `<p> NO<sub>2</sub> AQI: ${waqiContent.data.iaqi.no2?.v}</p>`;
-				html_content += `<p> SO<sub>2</sub> AQI: ${waqiContent.data.iaqi.so2?.v}</p>`;
-				html_content += `<p> CO AQI: ${waqiContent.data.iaqi.co?.v}</p>`;
+
+				// air quality data
+				html_content += `<p> Overall AQI: ${waqiContent.data.aqi} ${await toEmoji(waqiContent.data.aqi)}`;
+				if (airnowOverall.AQI !== undefined) {
+					html_content += ` (AirNow AQI: ${airnowOverall.AQI}, ${await toEmoji(airnowOverall.AQI)} ${airnowOverall.category})</p>`;
+				}
+				else {
+					html_content += `</p>`;
+				}
+				html_content += `<p> PM<sub>2.5</sub> AQI: ${waqiContent.data.iaqi.pm25?.v}  ${await toEmoji(waqiContent.data.iaqi.pm25?.v)}`;
+				if (airnowPM25.AQI !== undefined) {
+					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude)-200000}&xmax=${await lon2x(longitude)+200000}&ymin=${await lat2y(latitude)-200000}&ymax=${await lat2y(latitude)+200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await toEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
+				}
+				else {
+					html_content += `</p>`;
+				}
+				html_content += `<p> PM<sub>10</sub> AQI: ${waqiContent.data.iaqi.pm10?.v} ${await toEmoji(waqiContent.data.iaqi.pm10?.v)}`;
+				if (airnowPM10.AQI !== undefined) {
+					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude)-200000}&xmax=${await lon2x(longitude)+200000}&ymin=${await lat2y(latitude)-200000}&ymax=${await lat2y(latitude)+200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await toEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
+				}
+				else {
+					html_content += `</p>`;
+				}
+				html_content += `<p> O<sub>3</sub> (ozone) AQI: ${waqiContent.data.iaqi.o3?.v} ${await toEmoji(waqiContent.data.iaqi.o3?.v)}`;
+				if (airnowO3.AQI !== undefined) {
+					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude)-200000}&xmax=${await lon2x(longitude)+200000}&ymin=${await lat2y(latitude)-200000}&ymax=${await lat2y(latitude)+200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await toEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
+				}
+				else {
+					html_content += `</p>`;
+				}
+				html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${waqiContent.data.iaqi.no2?.v} ${await toEmoji(waqiContent.data.iaqi.no2?.v)}</p>`;
+				html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${waqiContent.data.iaqi.so2?.v} ${await toEmoji(waqiContent.data.iaqi.so2?.v)}</p>`;
+				html_content += `<p> CO (carbon monoxide) AQI: ${waqiContent.data.iaqi.co?.v} ${await toEmoji(waqiContent.data.iaqi.co?.v)}</p>`;
 				html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiContent.data.time.s} (${waqiContent.data.time.tz})</p>`;
+				if (airnowContent.length > 0) {
+					html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${airnowContent[0].Latitude}&amp;mlon=${airnowContent[0].Longitude}#map=9/${airnowContent[0].Latitude}/${airnowContent[0].Longitude}">${airnowContent[0].ReportingArea}, ${airnowContent[0].StateCode}</a>, measured at ${airnowContent[0].DateObserved} ${airnowContent[0].HourObserved}:00 ${airnowContent[0].LocalTimeZone}</p>`;
+				}
 			} catch (e) {
 				html_content += `<p>Unexpected error: ` + e + `</p>`;
-				html_content += `<p>` + e.stack + `</p>`;
+				html_content += `<p>` + (e as Error).stack + `</p>`;
 			}
-			html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
+			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
 			html_content += "<h1>Browser 🗔</h1>";
 			html_content += "<p> User Agent: " + clientUA + "</p>";
@@ -391,7 +500,7 @@ export default {
 	<title>IP Geolocation 🌐 + Weather 🌦</title>
 	<meta name="viewport" content="width=device-width" />
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
-	<link rel="apple-touch-icon" href="/favicon.png">
+	<link rel="apple-touch-icon" href="/favicon.ico">
 	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 	<style> ${html_style} </style>
   </head>

@@ -16,7 +16,11 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          preCommands: |
-            echo "[vars]" >> wrangler.toml
-            echo "waqiToken = \"${{ secrets.WAQI_TOKEN }}\"" >> wrangler.toml
-            echo "nwsAgent = \"${{ secrets.NWS_AGENT }}\"" >> wrangler.toml
+          secrets: |
+            WAQI_TOKEN
+            NWS_AGENT
+            AIRNOW_KEY
+        env:
+          WAQI_TOKEN: ${{ secrets.WAQI_TOKEN }}
+          NWS_AGENT: ${{ secrets.NWS_AGENT }}
+          AIRNOW_KEY: ${{ secrets.AIRNOW_KEY }}
