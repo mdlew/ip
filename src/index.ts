@@ -205,11 +205,11 @@ export default {
 		}
 
 		// Return a new Response based on a URL's pathname
-		const FAVICON_URL = ["/favicon.ico", "/favicon.svg"];
+		const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
 		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
 		// return static favicon asset
-		if (FAVICON_URL.includes(url.pathname)) {
+		if (STATIC_URLS.includes(url.pathname)) {
 			async function MethodNotAllowed(request: Request) {
 				return new Response(`Method ${request.method} not allowed.`, {
 					status: 405,
@@ -575,9 +575,13 @@ export default {
   <html lang="en">
   <head>
 	<title>IP Geolocation 🌐 + Weather 🌦</title>
+	<meta charset="utf-8">
+	<meta name="description" content="IP Geolocation and Weather information">
 	<meta name="viewport" content="width=device-width" />
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
 	<link rel="apple-touch-icon" href="/favicon.ico">
+	<link rel="preconnect" href="https://www.openstreetmap.org" />
+	<link rel="preconnect" href="https://radar.weather.gov" />
 	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 	<style> ${html_style} </style>
   </head>
