@@ -25,6 +25,18 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const assetManifest = JSON.parse(manifestJSON)
+		const latitude = request.cf.latitude;
+		const longitude = request.cf.longitude;
+		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
+		const PI = Math.PI;
+		const DEG2RAD = PI / 180;
+		const R = 6378137.0;
+		async function lat2y(lat: number) {
+			return Math.log(Math.tan(PI / 4 + lat * DEG2RAD / 2)) * R
+		}
+		async function lon2x(lon: number) {
+			return lon * DEG2RAD * R;
+		}
 
 		const grads = [
 			[
@@ -193,106 +205,12 @@ export default {
 		const nf = new Intl.NumberFormat("en-US", {
 			maximumFractionDigits: 1,
 		});
-		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
-		const PI = Math.PI;
-		const DEG2RAD = PI/180;
-		const R =  6378137.0;
-		async function lat2y(lat: number) { 
-			return Math.log(Math.tan(PI/4 + lat * DEG2RAD / 2)) * R
-		}
-		async function lon2x(lon: number) { 
-			return lon * DEG2RAD * R; 
-		}
 
-		// Return a new Response based on a URL's pathname
-		const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
-		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
-		// return static favicon asset
-		if (STATIC_URLS.includes(url.pathname)) {
-			async function MethodNotAllowed(request: Request) {
-				return new Response(`Method ${request.method} not allowed.`, {
-					status: 405,
-					headers: {
-						Allow: "GET",
-					},
-				});
-			}
-			// Only GET requests work with this proxy.
-			if (request.method !== "GET") return MethodNotAllowed(request);
-			try {
-				return await getAssetFromKV(
-					{
-						request,
-						waitUntil(promise: Promise<any>) {
-							return ctx.waitUntil(promise)
-						},
-					},
-					{
-						ASSET_NAMESPACE: env.__STATIC_CONTENT,
-						ASSET_MANIFEST: assetManifest,
-					},
-				)
-			} catch (e) {
-				const pathname = url.pathname;
-				return new Response(`"${pathname}" not found`, {
-					status: 404,
-					statusText: "not found",
-				});
-			}
-		}
-
-		// else do IP geolocation
-		else {
-			// set default security headers
-			const myHeaders = new Headers({
-				"content-type": "text/html;charset=UTF-8",
-				/*
-			  Secure your application with Content-Security-Policy headers.
-			  Enabling these headers will permit content from a trusted domain and all its subdomains.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-			  "Content-Security-Policy": "default-src 'self' example.com *.example.com",
-			  */
-				/*
-			  You can also set Strict-Transport-Security headers.
-			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
-			  Here's the code if you want to apply it:
-			  "Strict-Transport-Security" : "max-age=63072000; includeSubDomains; preload",
-			  */
-				/*
-			  Permissions-Policy header provides the ability to allow or deny the use of browser features, such as opting out of FLoC - which you can use below:
-			  "Permissions-Policy": "interest-cohort=()",
-			  */
-				/*
-			  X-XSS-Protection header prevents a page from loading if an XSS attack is detected.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
-			  */
-				"X-XSS-Protection": "0",
-				/*
-			  X-Frame-Options header prevents click-jacking attacks.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
-			  */
-				"X-Frame-Options": "DENY",
-				/*
-			  X-Content-Type-Options header prevents MIME-sniffing.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
-			  */
-				"X-Content-Type-Options": "nosniff",
-				"Referrer-Policy": "strict-origin-when-cross-origin",
-				"Cross-Origin-Embedder-Policy": 'require-corp; report-to="default";',
-				"Cross-Origin-Opener-Policy": 'same-site; report-to="default";',
-				"Cross-Origin-Resource-Policy": "same-site",
-			});
-
-			const clientUA = request.headers.get('User-Agent');
-			const clientIP = request.headers.get('CF-Connecting-IP');
-			const clientASN = request.cf.asn;
-			const clientISP = request.cf.asOrganization;
-			const latitude = request.cf.latitude;
-			const longitude = request.cf.longitude;
-			const tlsVersion = request.cf.tlsVersion;
-
+		// build HTML *******************************************************
+		async function renderHTMLhead() {
 			const timezone = request.cf.timezone;
+
 			const localized_date = new Date(
 				new Date().toLocaleString("en-US", { timeZone: timezone })
 			);
@@ -304,10 +222,34 @@ export default {
 				textColor = "black";
 			}
 
-			let html_style = ` body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
-	  #container{display: flex; flex-direction:column;min-height: 100%;}`;
-			html_style += `body{background: ${await toCSSGradient(hour)} ;}`;
-			html_style += `h1{color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}`;
+			const html_style = ` body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
+ #container{display: flex; flex-direction:column;min-height: 100%;}
+ body{background: ${await toCSSGradient(hour)} ;}
+ h1{color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}`;
+			const html_head = `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>IP Geolocation 🌐 + Weather 🌦</title>
+	<meta charset="utf-8">
+	<meta name="description" content="IP Geolocation and Weather information">
+	<meta name="viewport" content="width=device-width" />
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
+	<link rel="apple-touch-icon" href="/favicon.ico">
+	<link rel="preconnect" href="https://www.openstreetmap.org" />
+	<link rel="preconnect" href="https://radar.weather.gov" />
+	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+	<style> ${html_style} </style>
+</head>
+<body>
+	<div id="container">`;
+
+			return html_head;
+		}
+
+		async function renderHTMLgeolocation() {
+			const clientIP = request.headers.get('CF-Connecting-IP');
+			const clientASN = request.cf.asn;
+			const clientISP = request.cf.asOrganization;
 
 			let html_content = "<h1>IP Geolocation 🌐</h1>";
 
@@ -321,7 +263,11 @@ export default {
 			html_content += "<p> Timezone: " + request.cf.timezone + "</p>";
 			html_content += `<p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ` + request.cf.colo + `</p>`;
 
-			html_content += "<h1>Weather 🌦</h1>";
+			return html_content;
+		}
+
+		async function renderHTMLweather() {
+			let html_content = "<h1>Weather 🌦</h1>";
 			try {
 				// WAQI API setup https://aqicn.org/api/
 				const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
@@ -352,10 +298,20 @@ export default {
 					fetch(nwsApiPointsRequestUrl, nwsRequestInit),
 					fetch(airnowApiRequestUrl, airnowRequestInit),
 				]);
+				// if (!waqiResponse.ok) {
+				// 	throw new Error(`Request failed ${waqiApiRequestUrl}`);
+				// }
+				// if (!nwsPointsResponse.ok) {
+				// 	throw new Error(`Request failed ${nwsApiPointsRequestUrl}`);
+				// }
+				// if (!airnowResponse.ok) {
+				// 	throw new Error(`Request failed ${airnowApiRequestUrl}`);
+				// }
+
 				const [waqiContent, nwsPointsContent, airnowContent] = await Promise.all([
-					waqiResponse.json(),
-					nwsPointsResponse.json(),
-					airnowResponse.json(),
+					waqiResponse.ok ? waqiResponse.json() : undefined,
+					nwsPointsResponse.ok ? nwsPointsResponse.json() : undefined,
+					airnowResponse.ok ? airnowResponse.json() : undefined,
 				]);
 				let nwsForecastResponse = null;
 				let nwsForecastContent = null;
@@ -365,39 +321,42 @@ export default {
 				}
 				// parse AirNow response
 				const airnowPM25 = {
-					AQI: undefined, 
+					AQI: undefined,
 					category: undefined
 				};
 				const airnowPM10 = {
-					AQI: undefined, 
+					AQI: undefined,
 					category: undefined
 				};
 				const airnowO3 = {
-					AQI: undefined, 
+					AQI: undefined,
 					category: undefined
 				};
 				const airnowOverall = {
-					AQI: undefined, 
+					AQI: undefined,
 					category: undefined
 				};
-				for (let i = 0; i < airnowContent.length; i++) {
-					if (i === 0 || airnowContent[i].AQI > airnowOverall.AQI) {
-						airnowOverall.AQI = airnowContent[i].AQI;
-						airnowOverall.category = airnowContent[i].Category.Name;
-					}
-					if (airnowContent[i].ParameterName === "PM2.5") {
-						airnowPM25.AQI = airnowContent[i].AQI;
-						airnowPM25.category = airnowContent[i].Category.Name;
-					} 
-					else if (airnowContent[i].ParameterName === "PM10") {
-						airnowPM10.AQI = airnowContent[i].AQI;
-						airnowPM10.category = airnowContent[i].Category.Name;
-					}
-					else if (airnowContent[i].ParameterName === "O3") {
-						airnowO3.AQI = airnowContent[i].AQI;
-						airnowO3.category = airnowContent[i].Category.Name;
+				if (typeof airnowContent !== "undefined") {
+					for (let i = 0; i < airnowContent.length; i++) {
+						if (i === 0 || airnowContent[i].AQI > airnowOverall.AQI) {
+							airnowOverall.AQI = airnowContent[i].AQI;
+							airnowOverall.category = airnowContent[i].Category.Name;
+						}
+						if (airnowContent[i].ParameterName === "PM2.5") {
+							airnowPM25.AQI = airnowContent[i].AQI;
+							airnowPM25.category = airnowContent[i].Category.Name;
+						}
+						else if (airnowContent[i].ParameterName === "PM10") {
+							airnowPM10.AQI = airnowContent[i].AQI;
+							airnowPM10.category = airnowContent[i].Category.Name;
+						}
+						else if (airnowContent[i].ParameterName === "O3") {
+							airnowO3.AQI = airnowContent[i].AQI;
+							airnowO3.category = airnowContent[i].Category.Name;
+						}
 					}
 				}
+
 
 				const tempF = parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
 				const humidity = waqiContent.data.iaqi.h?.v;
@@ -435,7 +394,7 @@ export default {
 
 				html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
 				html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-				if ("properties" in nwsPointsContent) {
+				if ("properties" in nwsPointsContent && "properties" in nwsForecastContent) {
 					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
 					for (let i = 0; i < 3; i++) {
 						let weatherIcons = ""
@@ -533,21 +492,21 @@ export default {
 				}
 				html_content += `<p> PM<sub>2.5</sub> AQI: ${waqiContent.data.iaqi.pm25?.v}  ${await toEmoji(waqiContent.data.iaqi.pm25?.v)}`;
 				if (airnowPM25.AQI !== undefined) {
-					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude)-200000}&xmax=${await lon2x(longitude)+200000}&ymin=${await lat2y(latitude)-200000}&ymax=${await lat2y(latitude)+200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await toEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
+					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await toEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
 				}
 				else {
 					html_content += `</p>`;
 				}
 				html_content += `<p> PM<sub>10</sub> AQI: ${waqiContent.data.iaqi.pm10?.v} ${await toEmoji(waqiContent.data.iaqi.pm10?.v)}`;
 				if (airnowPM10.AQI !== undefined) {
-					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude)-200000}&xmax=${await lon2x(longitude)+200000}&ymin=${await lat2y(latitude)-200000}&ymax=${await lat2y(latitude)+200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await toEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
+					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await toEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
 				}
 				else {
 					html_content += `</p>`;
 				}
 				html_content += `<p> O<sub>3</sub> (ozone) AQI: ${waqiContent.data.iaqi.o3?.v} ${await toEmoji(waqiContent.data.iaqi.o3?.v)}`;
 				if (airnowO3.AQI !== undefined) {
-					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude)-200000}&xmax=${await lon2x(longitude)+200000}&ymin=${await lat2y(latitude)-200000}&ymax=${await lat2y(latitude)+200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await toEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
+					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await toEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
 				}
 				else {
 					html_content += `</p>`;
@@ -565,44 +524,134 @@ export default {
 			}
 			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
-			html_content += "<h1>Browser 🗔</h1>";
-			html_content += "<p> User Agent: " + clientUA + "</p>";
-			html_content += "<p> HTTP Version: " + request.cf.httpProtocol + "</p>";
-			html_content += "<p> TLS Version: " + tlsVersion + "</p>";
-			html_content += "<p> TLS Cipher: " + request.cf.tlsCipher + "</p>";
+			return html_content;
+		}
 
-			let html = `<!DOCTYPE html>
-  <html lang="en">
-  <head>
-	<title>IP Geolocation 🌐 + Weather 🌦</title>
-	<meta charset="utf-8">
-	<meta name="description" content="IP Geolocation and Weather information">
-	<meta name="viewport" content="width=device-width" />
-	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
-	<link rel="apple-touch-icon" href="/favicon.ico">
-	<link rel="preconnect" href="https://www.openstreetmap.org" />
-	<link rel="preconnect" href="https://radar.weather.gov" />
-	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-	<style> ${html_style} </style>
-  </head>
-  <body>
-	<div id="container">
-	${html_content}
+		async function renderHTMLfooter() {
+			const clientUA = request.headers.get('User-Agent');
+			const tlsVersion = request.cf.tlsVersion;
+
+			const html_footer = `<h1>Browser 🗔</h1>
+	<p> User Agent: ${clientUA} </p>
+	<p> HTTP Version: ${request.cf.httpProtocol} </p>
+	<p> TLS Version: ${tlsVersion} </p>
+	<p> TLS Cipher: ${request.cf.tlsCipher} </p>
 	</div>
-  </body>
-  <footer>
-	<p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
-	<p><a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
-  </footer>
-  </html>`;
+</body>
+<footer>
+  <p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
+  <p><a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
+</footer>
+</html>`;
+			return html_footer;
+		}
 
+		// render HTML
+		async function renderPage(writer: WritableStreamDefaultWriter, request: Request, env: Env) {
+			const encoder = new TextEncoder();
+			await writer.write(encoder.encode(await renderHTMLhead()));
 
-			if (tlsVersion !== "TLSv1.2" && tlsVersion !== "TLSv1.3") {
+			// build HTML content
+			await writer.write(encoder.encode(await renderHTMLgeolocation()));
+			await writer.write(encoder.encode(await renderHTMLweather()));
+
+			await writer.write(encoder.encode(await renderHTMLfooter()));
+			return writer.close();
+		}
+
+		// Response logic ******************************************************
+
+		// Return a new Response based on a URL's pathname
+		const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
+		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
+
+		// return static favicon asset
+		if (STATIC_URLS.includes(url.pathname)) {
+			async function MethodNotAllowed(request: Request) {
+				return new Response(`Method ${request.method} not allowed.`, {
+					status: 405,
+					headers: {
+						Allow: "GET",
+					},
+				});
+			}
+			// Only GET requests work with this proxy.
+			if (request.method !== "GET") return MethodNotAllowed(request);
+			try {
+				return await getAssetFromKV(
+					{
+						request,
+						waitUntil(promise: Promise<any>) {
+							return ctx.waitUntil(promise)
+						},
+					},
+					{
+						ASSET_NAMESPACE: env.__STATIC_CONTENT,
+						ASSET_MANIFEST: assetManifest,
+					},
+				)
+			} catch (e) {
+				const pathname = url.pathname;
+				return new Response(`"${pathname}" not found`, {
+					status: 404,
+					statusText: "not found",
+				});
+			}
+		}
+
+		// else do IP geolocation
+		else {
+			// set default security headers
+			const myHeaders = new Headers({
+				"content-type": "text/html;charset=UTF-8",
+				/*
+			  Secure your application with Content-Security-Policy headers.
+			  Enabling these headers will permit content from a trusted domain and all its subdomains.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+			  "Content-Security-Policy": "default-src 'self' example.com *.example.com",
+			  */
+				/*
+			  You can also set Strict-Transport-Security headers.
+			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
+			  Here's the code if you want to apply it:
+			  "Strict-Transport-Security" : "max-age=63072000; includeSubDomains; preload",
+			  */
+				/*
+			  Permissions-Policy header provides the ability to allow or deny the use of browser features, such as opting out of FLoC - which you can use below:
+			  "Permissions-Policy": "interest-cohort=()",
+			  */
+				/*
+			  X-XSS-Protection header prevents a page from loading if an XSS attack is detected.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+			  */
+				"X-XSS-Protection": "0",
+				/*
+			  X-Frame-Options header prevents click-jacking attacks.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
+			  */
+				"X-Frame-Options": "DENY",
+				/*
+			  X-Content-Type-Options header prevents MIME-sniffing.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+			  */
+				"X-Content-Type-Options": "nosniff",
+				"Referrer-Policy": "strict-origin-when-cross-origin",
+				"Cross-Origin-Embedder-Policy": 'require-corp; report-to="default";',
+				"Cross-Origin-Opener-Policy": 'same-site; report-to="default";',
+				"Cross-Origin-Resource-Policy": "same-site",
+			});
+
+			if (request.cf.tlsVersion !== "TLSv1.2" && request.cf.tlsVersion !== "TLSv1.3") {
 				return new Response("You need to use TLS version 1.2 or higher.", {
 					status: 400,
 				});
 			} else {
-				return new Response(html, {
+				let { readable, writable } = new IdentityTransformStream();
+
+				const writer = writable.getWriter();
+				ctx.waitUntil(renderPage(writer, request, env));
+
+				return new Response(readable, {
 					headers: myHeaders,
 				});
 			}
