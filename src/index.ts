@@ -27,6 +27,7 @@ export default {
 		const assetManifest = JSON.parse(manifestJSON)
 		const latitude = request.cf.latitude;
 		const longitude = request.cf.longitude;
+
 		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
 		const PI = Math.PI;
 		const DEG2RAD = PI / 180;
@@ -38,6 +39,7 @@ export default {
 			return lon * DEG2RAD * R;
 		}
 
+		// gradient data for background color
 		const grads = [
 			[
 				{ color: "#00000c", position: 0 },
@@ -151,23 +153,6 @@ export default {
 				{ color: "#150800", position: 100 },
 			],
 		];
-		const heatIndexHumidity = [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
-		const heatIndexTemp = [80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110];
-		const heatIndexTab = [
-			[80, 81, 83, 85, 88, 91, 94, 97, 101, 105, 109, 114, 119, 124, 130, 136],
-			[80, 82, 84, 87, 89, 93, 96, 100, 104, 109, 114, 119, 124, 130, 137, 999],
-			[80, 83, 85, 88, 91, 95, 99, 103, 108, 113, 118, 124, 131, 137, 999, 999],
-			[81, 84, 86, 89, 93, 97, 101, 106, 112, 117, 124, 130, 137, 999, 999, 999],
-			[82, 84, 88, 91, 95, 100, 105, 110, 116, 123, 129, 137, 999, 999, 999, 999],
-			[82, 85, 89, 93, 98, 103, 108, 114, 121, 128, 136, 999, 999, 999, 999, 999],
-			[83, 86, 90, 95, 100, 105, 112, 119, 126, 134, 999, 999, 999, 999, 999, 999],
-			[84, 88, 92, 97, 103, 109, 116, 124, 132, 999, 999, 999, 999, 999, 999, 999],
-			[84, 89, 94, 100, 106, 113, 121, 129, 999, 999, 999, 999, 999, 999, 999, 999],
-			[85, 90, 96, 102, 110, 117, 126, 135, 999, 999, 999, 999, 999, 999, 999, 999],
-			[86, 91, 98, 105, 113, 122, 131, 999, 999, 999, 999, 999, 999, 999, 999, 999],
-			[86, 93, 100, 108, 117, 127, 999, 999, 999, 999, 999, 999, 999, 999, 999, 999],
-			[87, 95, 103, 112, 121, 132, 999, 999, 999, 999, 999, 999, 999, 999, 999, 999],
-		];
 		async function toCSSGradient(hour: number) {
 			let css = "linear-gradient(to bottom,";
 			const data = grads[hour];
@@ -251,17 +236,16 @@ export default {
 			const clientASN = request.cf.asn;
 			const clientISP = request.cf.asOrganization;
 
-			let html_content = "<h1>IP Geolocation 🌐</h1>";
-
-			html_content += `<p> Public IP: ` + clientIP + ` (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>`;
-			html_content += `<p> ISP: ` + clientISP + `, ASN: ` + clientASN + ` (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>`;
-			html_content += `<iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=` + (parseFloat(longitude) - 0.35) + `%2C` + (parseFloat(latitude) - 0.35) + `%2C` + (parseFloat(longitude) + 0.35) + `%2C` + (parseFloat(latitude) + 0.35) + `&amp;layer=mapnik&amp;marker=` + latitude + `%2C` + longitude + `" style="border: 1px solid black; max-width: 100%;"></iframe>`;
-			html_content += `<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a></p>`;
-			html_content += "<p> City: " + request.cf.city + ", MetroCode: " + request.cf.metroCode + "</p>";
-			html_content += "<p> Region: " + request.cf.region + ", RegionCode: " + request.cf.regionCode + ", PostalCode: " + request.cf.postalCode + "</p>";
-			html_content += "<p> Country: " + request.cf.country + ",  Continent: " + request.cf.continent + "</p>";
-			html_content += "<p> Timezone: " + request.cf.timezone + "</p>";
-			html_content += `<p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ` + request.cf.colo + `</p>`;
+			const html_content = `<h1>IP Geolocation 🌐</h1>
+<p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>
+<p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>
+<iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
+<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a></p>
+<p> City: ${request.cf.city}, MetroCode: ${request.cf.metroCode}</p>
+<p> Region: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
+<p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>
+<p> Timezone: ${request.cf.timezone}</p>
+<p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>`;
 
 			return html_content;
 		}
@@ -313,11 +297,12 @@ export default {
 					nwsPointsResponse.ok ? nwsPointsResponse.json() : undefined,
 					airnowResponse.ok ? airnowResponse.json() : undefined,
 				]);
-				let nwsForecastResponse = null;
-				let nwsForecastContent = null;
+				// grab weather.gov forecast
+				let nwsForecastResponse = undefined;
+				let nwsForecastContent = undefined;
 				if ("properties" in nwsPointsContent) {
 					nwsForecastResponse = await fetch(nwsPointsContent.properties.forecast, nwsRequestInit);
-					nwsForecastContent = await nwsForecastResponse.json();
+					nwsForecastContent = nwsForecastResponse.ok ? await nwsForecastResponse.json() : undefined;
 				}
 				// parse AirNow response
 				const airnowPM25 = {
@@ -358,10 +343,10 @@ export default {
 				}
 
 
+				// temperature data
 				const tempF = parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
 				const humidity = waqiContent.data.iaqi.h?.v;
 				const windSpeed = parseFloat(waqiContent.data.iaqi.w?.v) * 2.23694; // m/s to mph
-
 				// compute heat index if it's warm enough
 				let heatIndex = 0.5 * (tempF + 61.0 + ((tempF - 68.0) * 1.2) + (humidity * 0.094));
 				if ((tempF + heatIndex) / 2 > 80) {
@@ -394,90 +379,92 @@ export default {
 
 				html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
 				html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-				if ("properties" in nwsPointsContent && "properties" in nwsForecastContent) {
-					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
-					for (let i = 0; i < 3; i++) {
-						let weatherIcons = ""
-						if (nwsForecastContent.properties.periods[i].icon.includes("day/skc")) {
-							weatherIcons += "🌞";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("night/skc")) {
-							weatherIcons += "🌜";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("day/few")) {
-							weatherIcons += "☀️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("night/few")) {
-							weatherIcons += "🌙";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("day/sct")) {
-							weatherIcons += "⛅";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("night/sct")) {
-							weatherIcons += "🌙☁️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("day/bkn")) {
-							weatherIcons += "🌥️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("night/bkn")) {
-							weatherIcons += "🌙☁️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("day/ovc")) {
-							weatherIcons += "☁️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("night/ovc")) {
-							weatherIcons += "☁️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("wind")) {
-							weatherIcons += "🌬️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("snow")) {
-							weatherIcons += "❄️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("rain")) {
-							weatherIcons += "🌧️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("sleet")) {
-							weatherIcons += "🧊🌨️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("fzra")) {
-							weatherIcons += "🧊🌧️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("tsra")) {
-							weatherIcons += "⛈️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("tornado")) {
-							weatherIcons += "🌪️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("hurricane")) {
-							weatherIcons += "🌀";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("tropical")) {
-							weatherIcons += "🌀";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("dust")) {
-							weatherIcons += "🌫️💨";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("smoke")) {
-							weatherIcons += "🔥🌫️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("haze")) {
-							weatherIcons += "😶‍🌫️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("hot")) {
-							weatherIcons += "🥵";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("cold")) {
-							weatherIcons += "🥶";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("blizzard")) {
-							weatherIcons += "🌬️❄️";
-						}
-						if (nwsForecastContent.properties.periods[i].icon.includes("fog")) {
-							weatherIcons += "🌫️";
-						}
+				if ("properties" in nwsPointsContent) {
+					if ("properties" in nwsForecastContent) {
+						html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
+						for (let i = 0; i < 3; i++) {
+							let weatherIcons = ""
+							if (nwsForecastContent.properties.periods[i].icon.includes("day/skc")) {
+								weatherIcons += "🌞";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("night/skc")) {
+								weatherIcons += "🌜";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("day/few")) {
+								weatherIcons += "☀️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("night/few")) {
+								weatherIcons += "🌙";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("day/sct")) {
+								weatherIcons += "⛅";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("night/sct")) {
+								weatherIcons += "🌙☁️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("day/bkn")) {
+								weatherIcons += "🌥️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("night/bkn")) {
+								weatherIcons += "🌙☁️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("day/ovc")) {
+								weatherIcons += "☁️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("night/ovc")) {
+								weatherIcons += "☁️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("wind")) {
+								weatherIcons += "🌬️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("snow")) {
+								weatherIcons += "❄️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("rain")) {
+								weatherIcons += "🌧️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("sleet")) {
+								weatherIcons += "🧊🌨️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("fzra")) {
+								weatherIcons += "🧊🌧️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("tsra")) {
+								weatherIcons += "⛈️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("tornado")) {
+								weatherIcons += "🌪️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("hurricane")) {
+								weatherIcons += "🌀";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("tropical")) {
+								weatherIcons += "🌀";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("dust")) {
+								weatherIcons += "🌫️💨";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("smoke")) {
+								weatherIcons += "🔥🌫️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("haze")) {
+								weatherIcons += "😶‍🌫️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("hot")) {
+								weatherIcons += "🥵";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("cold")) {
+								weatherIcons += "🥶";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("blizzard")) {
+								weatherIcons += "🌬️❄️";
+							}
+							if (nwsForecastContent.properties.periods[i].icon.includes("fog")) {
+								weatherIcons += "🌫️";
+							}
 
-						html_content += `<li>${nwsForecastContent.properties.periods[i].name}: ${weatherIcons} ${nwsForecastContent.properties.periods[i].detailedForecast}</li>`;
+							html_content += `<li>${nwsForecastContent.properties.periods[i].name}: ${weatherIcons} ${nwsForecastContent.properties.periods[i].detailedForecast}</li>`;
+						}
 					}
 					html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsContent.properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsContent.properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
 				}
@@ -547,15 +534,15 @@ export default {
 		}
 
 		// render HTML
-		async function renderPage(writer: WritableStreamDefaultWriter, request: Request, env: Env) {
+		async function renderPage(writer: WritableStreamDefaultWriter) {
 			const encoder = new TextEncoder();
-			await writer.write(encoder.encode(await renderHTMLhead()));
+			writer.write(encoder.encode(await renderHTMLhead()));
 
 			// build HTML content
-			await writer.write(encoder.encode(await renderHTMLgeolocation()));
-			await writer.write(encoder.encode(await renderHTMLweather()));
+			writer.write(encoder.encode(await renderHTMLgeolocation()));
+			writer.write(encoder.encode(await renderHTMLweather()));
 
-			await writer.write(encoder.encode(await renderHTMLfooter()));
+			writer.write(encoder.encode(await renderHTMLfooter()));
 			return writer.close();
 		}
 
@@ -649,7 +636,7 @@ export default {
 				let { readable, writable } = new IdentityTransformStream();
 
 				const writer = writable.getWriter();
-				ctx.waitUntil(renderPage(writer, request, env));
+				ctx.waitUntil(renderPage(writer));
 
 				return new Response(readable, {
 					headers: myHeaders,
