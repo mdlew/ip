@@ -24,9 +24,19 @@ export interface Env {
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		const start = performance.now();
 		const assetManifest = JSON.parse(manifestJSON)
 		const latitude = request.cf.latitude;
 		const longitude = request.cf.longitude;
+
+		// performance JSON object
+		const timing = {
+			renderHead: NaN,
+			renderGeolocation: NaN,
+			renderWeather: NaN,
+			renderFooter: NaN,
+			total: NaN,
+		}
 
 		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
 		const PI = Math.PI;
@@ -193,7 +203,8 @@ export default {
 
 
 		// build HTML *******************************************************
-		async function renderHTMLhead() {
+		async function renderHead() {
+			const start = performance.now();
 			const timezone = request.cf.timezone;
 
 			const localized_date = new Date(
@@ -209,8 +220,7 @@ export default {
 
 			const html_style = ` body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
  #container{display: flex; flex-direction:column;min-height: 100%;}
- body{background: ${await toCSSGradient(hour)} ;}
- h1{color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}`;
+ body{background: ${await toCSSGradient(hour)};} h1{color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}`;
 			const html_head = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -226,32 +236,36 @@ export default {
 	<style> ${html_style} </style>
 </head>
 <body>
-	<div id="container">`;
+<div id="container">`;
 
+			timing.renderHead = performance.now() - start;
 			return html_head;
 		}
 
-		async function renderHTMLgeolocation() {
+		async function renderGeolocation() {
+			const start = performance.now();
 			const clientIP = request.headers.get('CF-Connecting-IP');
 			const clientASN = request.cf.asn;
 			const clientISP = request.cf.asOrganization;
 
-			const html_content = `<h1>IP Geolocation 🌐</h1>
-<p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>
-<p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>
-<iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
-<p> (Latitude, Longitude): <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a></p>
-<p> City: ${request.cf.city}, MetroCode: ${request.cf.metroCode}</p>
-<p> Region: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
-<p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>
-<p> Timezone: ${request.cf.timezone}</p>
-<p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>`;
+			const html_content = `  <h1>IP Geolocation 🌐</h1>
+  <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>
+  <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>
+  <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
+  <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${request.cf.timezone}</p>
+  <p> City: ${request.cf.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf.metroCode}</p>
+  <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
+  <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>
+  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>`;
 
+			timing.renderGeolocation = performance.now() - start;
 			return html_content;
 		}
 
-		async function renderHTMLweather() {
-			let html_content = "<h1>Weather 🌦</h1>";
+		async function renderWeather() {
+			const start = performance.now();
+
+			let html_content = "  <h1>Weather 🌦</h1>";
 			try {
 				// WAQI API setup https://aqicn.org/api/
 				const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
@@ -282,15 +296,15 @@ export default {
 					fetch(nwsApiPointsRequestUrl, nwsRequestInit),
 					fetch(airnowApiRequestUrl, airnowRequestInit),
 				]);
-				// if (!waqiResponse.ok) {
-				// 	throw new Error(`Request failed ${waqiApiRequestUrl}`);
-				// }
-				// if (!nwsPointsResponse.ok) {
-				// 	throw new Error(`Request failed ${nwsApiPointsRequestUrl}`);
-				// }
-				// if (!airnowResponse.ok) {
-				// 	throw new Error(`Request failed ${airnowApiRequestUrl}`);
-				// }
+				if (!waqiResponse.ok) {
+					console.log({ response_url: waqiResponse.url, response_status: waqiResponse.status, response_statusText: waqiResponse.statusText });
+				}
+				if (!nwsPointsResponse.ok) {
+					console.log({ response_url: nwsPointsResponse.url, response_status: nwsPointsResponse.status, response_statusText: nwsPointsResponse.statusText });
+				}
+				if (!airnowResponse.ok) {
+					console.log({ response_url: airnowResponse.url, response_status: airnowResponse.status, response_statusText: airnowResponse.statusText });
+				}
 
 				const [waqiContent, nwsPointsContent, airnowContent] = await Promise.all([
 					waqiResponse.ok ? waqiResponse.json() : undefined,
@@ -300,9 +314,12 @@ export default {
 				// grab weather.gov forecast
 				let nwsForecastResponse = undefined;
 				let nwsForecastContent = undefined;
-				if ("properties" in nwsPointsContent) {
+				if (nwsPointsResponse.ok && "properties" in nwsPointsContent) {
 					nwsForecastResponse = await fetch(nwsPointsContent.properties.forecast, nwsRequestInit);
 					nwsForecastContent = nwsForecastResponse.ok ? await nwsForecastResponse.json() : undefined;
+					if (!nwsForecastResponse.ok) {
+						console.log({ response_url: nwsForecastResponse.url, response_status: nwsForecastResponse.status, response_statusText: nwsForecastResponse.statusText });
+					}
 				}
 				// parse AirNow response
 				const airnowPM25 = {
@@ -379,8 +396,8 @@ export default {
 
 				html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
 				html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-				if ("properties" in nwsPointsContent) {
-					if ("properties" in nwsForecastContent) {
+				if (nwsPointsResponse.ok && "properties" in nwsPointsContent) {
+					if (nwsForecastResponse.ok && "properties" in nwsForecastContent) {
 						html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
 						for (let i = 0; i < 3; i++) {
 							let weatherIcons = ""
@@ -506,43 +523,52 @@ export default {
 					html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${airnowContent[0].Latitude}&amp;mlon=${airnowContent[0].Longitude}#map=9/${airnowContent[0].Latitude}/${airnowContent[0].Longitude}">${airnowContent[0].ReportingArea}, ${airnowContent[0].StateCode}</a>, measured at ${airnowContent[0].DateObserved} ${airnowContent[0].HourObserved}:00 ${airnowContent[0].LocalTimeZone}</p>`;
 				}
 			} catch (e) {
-				html_content += `<p>Unexpected error: ` + e + `</p>`;
+				html_content += `<p>Error: ` + e + `</p>`;
 				html_content += `<p>` + (e as Error).stack + `</p>`;
+				console.log({ error_stack: (e as Error).stack });
 			}
 			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
+			timing.renderWeather = performance.now() - start;
 			return html_content;
 		}
 
-		async function renderHTMLfooter() {
+		async function renderFooter() {
+			const start = performance.now();
 			const clientUA = request.headers.get('User-Agent');
 			const tlsVersion = request.cf.tlsVersion;
 
-			const html_footer = `<h1>Browser 🗔</h1>
-	<p> User Agent: ${clientUA} </p>
-	<p> HTTP Version: ${request.cf.httpProtocol} </p>
-	<p> TLS Version: ${tlsVersion} </p>
-	<p> TLS Cipher: ${request.cf.tlsCipher} </p>
-	</div>
+			const html_footer = `  <h1>Browser 🗔</h1>
+  <p> User Agent: ${clientUA}</p>
+  <p> HTTP Version: ${request.cf.httpProtocol}</p>
+  <p> TLS Version: ${tlsVersion}</p>
+  <p> TLS Cipher: ${request.cf.tlsCipher}</p>
+</div>
 </body>
 <footer>
   <p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p><a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
 </html>`;
+
+			timing.renderFooter = performance.now() - start;
 			return html_footer;
 		}
 
 		// render HTML
 		async function renderPage(writer: WritableStreamDefaultWriter) {
 			const encoder = new TextEncoder();
-			writer.write(encoder.encode(await renderHTMLhead()));
 
+			writer.write(encoder.encode(await renderHead()));
 			// build HTML content
-			writer.write(encoder.encode(await renderHTMLgeolocation()));
-			writer.write(encoder.encode(await renderHTMLweather()));
+			writer.write(encoder.encode(await renderGeolocation()));
+			writer.write(encoder.encode(await renderWeather()));
 
-			writer.write(encoder.encode(await renderHTMLfooter()));
+			writer.write(encoder.encode(await renderFooter()));
+
+			// log performance
+			timing.total = performance.now() - start;
+			console.log(timing);
 			return writer.close();
 		}
 
@@ -579,6 +605,7 @@ export default {
 				)
 			} catch (e) {
 				const pathname = url.pathname;
+				console.log({ error: `"${pathname}" not found`, error_stack: (e as Error).stack });
 				return new Response(`"${pathname}" not found`, {
 					status: 404,
 					statusText: "not found",
