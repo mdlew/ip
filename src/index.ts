@@ -26,6 +26,8 @@ export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const start = performance.now();
 		const assetManifest = JSON.parse(manifestJSON)
+		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
+
 		const latitude = request.cf.latitude;
 		const longitude = request.cf.longitude;
 
@@ -33,9 +35,10 @@ export default {
 		const timing = {
 			renderHead: NaN,
 			renderGeolocation: NaN,
+			renderWeatherFirstFetch: NaN,
 			renderWeather: NaN,
 			renderFooter: NaN,
-			total: NaN,
+			renderTotal: NaN,
 		}
 
 		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
@@ -255,8 +258,7 @@ export default {
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${request.cf.timezone}</p>
   <p> City: ${request.cf.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
-  <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>
-  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>`;
+  <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>`;
 
 			timing.renderGeolocation = performance.now() - start;
 			return html_content;
@@ -296,6 +298,7 @@ export default {
 					fetch(nwsApiPointsRequestUrl, nwsRequestInit),
 					fetch(airnowApiRequestUrl, airnowRequestInit),
 				]);
+				timing.renderWeatherFirstFetch = performance.now() - start;
 				if (!waqiResponse.ok) {
 					console.log({ response_url: waqiResponse.url, response_status: waqiResponse.status, response_statusText: waqiResponse.statusText });
 				}
@@ -543,6 +546,7 @@ export default {
   <p> HTTP Version: ${request.cf.httpProtocol}</p>
   <p> TLS Version: ${tlsVersion}</p>
   <p> TLS Cipher: ${request.cf.tlsCipher}</p>
+  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>
 </div>
 </body>
 <footer>
@@ -567,7 +571,7 @@ export default {
 			writer.write(encoder.encode(await renderFooter()));
 
 			// log performance
-			timing.total = performance.now() - start;
+			timing.renderTotal = performance.now() - start;
 			console.log(timing);
 			return writer.close();
 		}
@@ -576,9 +580,9 @@ export default {
 
 		// Return a new Response based on a URL's pathname
 		const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
-		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
+		const WORKER_URLS = ["/"];
 
-		// return static favicon asset
+		// return static asset
 		if (STATIC_URLS.includes(url.pathname)) {
 			async function MethodNotAllowed(request: Request) {
 				return new Response(`Method ${request.method} not allowed.`, {
@@ -659,7 +663,7 @@ export default {
 				return new Response("You need to use TLS version 1.2 or higher.", {
 					status: 400,
 				});
-			} else {
+			} else if (WORKER_URLS.includes(url.pathname)) {
 				let { readable, writable } = new IdentityTransformStream();
 
 				const writer = writable.getWriter();
@@ -667,6 +671,13 @@ export default {
 
 				return new Response(readable, {
 					headers: myHeaders,
+				});
+			} else {
+				const pathname = url.pathname;
+				console.log({ error: `"${pathname}" not found` });
+				return new Response("Not found", {
+					status: 404,
+					statusText: "not found",
 				});
 			}
 		}
