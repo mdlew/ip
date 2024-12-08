@@ -255,8 +255,7 @@ export default {
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${request.cf.timezone}</p>
   <p> City: ${request.cf.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
-  <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>
-  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>`;
+  <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>`;
 
 			timing.renderGeolocation = performance.now() - start;
 			return html_content;
@@ -543,6 +542,7 @@ export default {
   <p> HTTP Version: ${request.cf.httpProtocol}</p>
   <p> TLS Version: ${tlsVersion}</p>
   <p> TLS Cipher: ${request.cf.tlsCipher}</p>
+  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>
 </div>
 </body>
 <footer>
