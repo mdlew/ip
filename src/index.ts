@@ -40,6 +40,7 @@ export default {
 			renderFooter: NaN,
 			renderTotal: NaN,
 		}
+		const fetchTimeout = 5000; // 5 seconds
 
 		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
 		const PI = Math.PI;
@@ -252,8 +253,8 @@ export default {
 			const clientISP = request.cf.asOrganization;
 
 			const html_content = `  <h1>IP Geolocation 🌐</h1>
-  <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare Radar info</a>)</p>
-  <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare Radar info</a>)</p>
+  <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare radar</a>)</p>
+  <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${request.cf.timezone}</p>
   <p> City: ${request.cf.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf.metroCode}</p>
@@ -275,6 +276,7 @@ export default {
 					headers: {
 						"content-type": "application/json;charset=UTF-8",
 					},
+					signal: AbortSignal.timeout(fetchTimeout),
 				};
 				// https://www.weather.gov/documentation/services-web-api API setup
 				const nwsApiPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
@@ -283,6 +285,7 @@ export default {
 						"accept": "application/geo+json",
 						"User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
 					},
+					signal: AbortSignal.timeout(fetchTimeout),
 				};
 				// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
 				const airnowApiRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
@@ -290,6 +293,7 @@ export default {
 					headers: {
 						"content-type": "application/json;charset=UTF-8",
 					},
+					signal: AbortSignal.timeout(fetchTimeout),
 				};
 
 				// issue concurrent requests to WAQI and NWS APIs
