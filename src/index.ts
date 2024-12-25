@@ -269,270 +269,282 @@ export default {
 			const start = performance.now();
 
 			let html_content = "  <h1>Weather 🌦</h1>";
-			try {
-				// WAQI API setup https://aqicn.org/api/
-				const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
-				const waqiRequestInit = {
-					headers: {
-						"content-type": "application/json;charset=UTF-8",
-					},
-					signal: AbortSignal.timeout(fetchTimeout),
-				};
-				// https://www.weather.gov/documentation/services-web-api API setup
-				const nwsApiPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
-				const nwsRequestInit = {
-					headers: {
-						"accept": "application/geo+json",
-						"User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
-					},
-					signal: AbortSignal.timeout(fetchTimeout),
-				};
-				// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
-				const airnowApiRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
-				const airnowRequestInit = {
-					headers: {
-						"content-type": "application/json;charset=UTF-8",
-					},
-					signal: AbortSignal.timeout(fetchTimeout),
-				};
+			// WAQI API setup https://aqicn.org/api/
+			const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
+			const waqiRequestInit = {
+				headers: {
+					"content-type": "application/json;charset=UTF-8",
+				},
+				signal: AbortSignal.timeout(fetchTimeout),
+			};
+			// https://www.weather.gov/documentation/services-web-api API setup
+			const nwsApiPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
+			const nwsRequestInit = {
+				headers: {
+					"accept": "application/geo+json",
+					"User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
+				},
+				signal: AbortSignal.timeout(fetchTimeout),
+			};
+			// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
+			const airnowApiRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+			const airnowRequestInit = {
+				headers: {
+					"content-type": "application/json;charset=UTF-8",
+				},
+				signal: AbortSignal.timeout(fetchTimeout),
+			};
 
+			let waqiResponse = undefined;
+			let nwsPointsResponse = undefined;
+			let airnowResponse = undefined;
+			try {
 				// issue concurrent requests to WAQI and NWS APIs
-				const [waqiResponse, nwsPointsResponse, airnowResponse] = await Promise.all([
+				[waqiResponse, nwsPointsResponse, airnowResponse] = await Promise.all([
 					fetch(waqiApiRequestUrl, waqiRequestInit),
 					fetch(nwsApiPointsRequestUrl, nwsRequestInit),
 					fetch(airnowApiRequestUrl, airnowRequestInit),
 				]);
-				timing.renderWeatherFirstFetch = performance.now() - start;
-				if (!waqiResponse.ok) {
-					console.log({ response_url: waqiResponse.url, response_status: waqiResponse.status, response_statusText: waqiResponse.statusText });
-				}
-				if (!nwsPointsResponse.ok) {
-					console.log({ response_url: nwsPointsResponse.url, response_status: nwsPointsResponse.status, response_statusText: nwsPointsResponse.statusText });
-				}
-				if (!airnowResponse.ok) {
-					console.log({ response_url: airnowResponse.url, response_status: airnowResponse.status, response_statusText: airnowResponse.statusText });
-				}
-
-				const [waqiContent, nwsPointsContent, airnowContent] = await Promise.all([
-					waqiResponse.ok ? waqiResponse.json() : undefined,
-					nwsPointsResponse.ok ? nwsPointsResponse.json() : undefined,
-					airnowResponse.ok ? airnowResponse.json() : undefined,
-				]);
-				// grab weather.gov forecast
-				let nwsForecastResponse = undefined;
-				let nwsForecastContent = undefined;
-				if (nwsPointsResponse.ok && "properties" in nwsPointsContent) {
-					nwsForecastResponse = await fetch(nwsPointsContent.properties.forecast, nwsRequestInit);
-					nwsForecastContent = nwsForecastResponse.ok ? await nwsForecastResponse.json() : undefined;
-					if (!nwsForecastResponse.ok) {
-						console.log({ response_url: nwsForecastResponse.url, response_status: nwsForecastResponse.status, response_statusText: nwsForecastResponse.statusText });
-					}
-				}
-				// parse AirNow response
-				const airnowPM25 = {
-					AQI: undefined,
-					category: undefined
-				};
-				const airnowPM10 = {
-					AQI: undefined,
-					category: undefined
-				};
-				const airnowO3 = {
-					AQI: undefined,
-					category: undefined
-				};
-				const airnowOverall = {
-					AQI: undefined,
-					category: undefined
-				};
-				if (typeof airnowContent !== "undefined") {
-					for (let i = 0; i < airnowContent.length; i++) {
-						if (i === 0 || airnowContent[i].AQI > airnowOverall.AQI) {
-							airnowOverall.AQI = airnowContent[i].AQI;
-							airnowOverall.category = airnowContent[i].Category.Name;
-						}
-						if (airnowContent[i].ParameterName === "PM2.5") {
-							airnowPM25.AQI = airnowContent[i].AQI;
-							airnowPM25.category = airnowContent[i].Category.Name;
-						}
-						else if (airnowContent[i].ParameterName === "PM10") {
-							airnowPM10.AQI = airnowContent[i].AQI;
-							airnowPM10.category = airnowContent[i].Category.Name;
-						}
-						else if (airnowContent[i].ParameterName === "O3") {
-							airnowO3.AQI = airnowContent[i].AQI;
-							airnowO3.category = airnowContent[i].Category.Name;
-						}
-					}
-				}
-
-
-				// temperature data
-				const tempF = parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
-				const humidity = waqiContent.data.iaqi.h?.v;
-				const windSpeed = parseFloat(waqiContent.data.iaqi.w?.v) * 2.23694; // m/s to mph
-				// compute heat index if it's warm enough
-				let heatIndex = 0.5 * (tempF + 61.0 + ((tempF - 68.0) * 1.2) + (humidity * 0.094));
-				if ((tempF + heatIndex) / 2 > 80) {
-					heatIndex = -42.379 + 2.04901523 * tempF + 10.14333127 * humidity - .22475541 * tempF * humidity - .00683783 * tempF * tempF - .05481717 * humidity * humidity + .00122874 * tempF * tempF * humidity + .00085282 * tempF * humidity * humidity - .00000199 * tempF * tempF * humidity * humidity;
-					if (humidity < 13 && tempF > 80 && tempF < 112) {
-						heatIndex -= ((13 - humidity) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17); // low humidity correction
-					}
-					if (humidity > 85 && tempF > 80 && tempF < 87) {
-						heatIndex += ((humidity - 85) / 10) * ((87 - tempF) / 5); // high humidity correction
-					}
-				}
-				// compute wind chill
-				const windChill = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeed, 0.16) + 0.4275 * tempF * Math.pow(windSpeed, 0.16);
-
-				html_content += `<p> Temperature: ` + nf.format(tempF) + `°F (${nf.format(waqiContent.data.iaqi.t?.v)} °C)</p>`;
-				// if within range, print heat index
-				//if (tempF > 80 && humidity > 40) {
-				if (heatIndex > 80) {
-					//const humidityIdx = heatIndexHumidity.findIndex((element) => element > humidity);
-					//const tempIdx = heatIndexTemp.findIndex((element) => element > tempF);
-					//const humidityGrad = (heatIndexTab[humidityIdx][tempIdx-1]-heatIndexTab[humidityIdx-1][tempIdx-1])/(heatIndexHumidity[humidityIdx]-heatIndexHumidity[humidityIdx-1]);
-					//const tempGrad = (heatIndexTab[humidityIdx-1][tempIdx]-heatIndexTab[humidityIdx-1][tempIdx-1])/(heatIndexTemp[tempIdx]-heatIndexTemp[tempIdx-1]);
-					//const heatIndex = heatIndexTab[humidityIdx-1][tempIdx-1] + humidityGrad*(humidity - heatIndexHumidity[humidityIdx-1]) + tempGrad*(tempF - heatIndexTemp[tempIdx-1]);
-					html_content += `<p> Feels like: ${nf.format(heatIndex)}°F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
-				}
-				// if within range, print wind chill
-				if (windChill < 40) {
-					html_content += `<p> Feels like: ${nf.format(windChill)}°F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
-				}
-
-				html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
-				html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-				if (nwsPointsResponse.ok && "properties" in nwsPointsContent) {
-					if (nwsForecastResponse.ok && "properties" in nwsForecastContent) {
-						html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
-						for (let i = 0; i < 3; i++) {
-							let weatherIcons = ""
-							if (nwsForecastContent.properties.periods[i].icon.includes("day/skc")) {
-								weatherIcons += "🌞";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("night/skc")) {
-								weatherIcons += "🌜";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("day/few")) {
-								weatherIcons += "☀️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("night/few")) {
-								weatherIcons += "🌙";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("day/sct")) {
-								weatherIcons += "⛅";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("night/sct")) {
-								weatherIcons += "🌙☁️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("day/bkn")) {
-								weatherIcons += "🌥️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("night/bkn")) {
-								weatherIcons += "🌙☁️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("day/ovc")) {
-								weatherIcons += "☁️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("night/ovc")) {
-								weatherIcons += "☁️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("wind")) {
-								weatherIcons += "🌬️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("snow")) {
-								weatherIcons += "❄️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("rain")) {
-								weatherIcons += "🌧️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("sleet")) {
-								weatherIcons += "🧊🌨️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("fzra")) {
-								weatherIcons += "🧊🌧️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("tsra")) {
-								weatherIcons += "⛈️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("tornado")) {
-								weatherIcons += "🌪️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("hurricane")) {
-								weatherIcons += "🌀";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("tropical")) {
-								weatherIcons += "🌀";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("dust")) {
-								weatherIcons += "🌫️💨";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("smoke")) {
-								weatherIcons += "🔥🌫️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("haze")) {
-								weatherIcons += "😶‍🌫️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("hot")) {
-								weatherIcons += "🥵";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("cold")) {
-								weatherIcons += "🥶";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("blizzard")) {
-								weatherIcons += "🌬️❄️";
-							}
-							if (nwsForecastContent.properties.periods[i].icon.includes("fog")) {
-								weatherIcons += "🌫️";
-							}
-
-							html_content += `<li>${nwsForecastContent.properties.periods[i].name}: ${weatherIcons} ${nwsForecastContent.properties.periods[i].detailedForecast}</li>`;
-						}
-					}
-					html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsContent.properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsContent.properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
-				}
-
-				// air quality data
-				html_content += `<p> Overall AQI: ${waqiContent.data.aqi} ${await toEmoji(waqiContent.data.aqi)}`;
-				if (airnowOverall.AQI !== undefined) {
-					html_content += ` (AirNow AQI: ${airnowOverall.AQI}, ${await toEmoji(airnowOverall.AQI)} ${airnowOverall.category})</p>`;
-				}
-				else {
-					html_content += `</p>`;
-				}
-				html_content += `<p> PM<sub>2.5</sub> AQI: ${waqiContent.data.iaqi.pm25?.v}  ${await toEmoji(waqiContent.data.iaqi.pm25?.v)}`;
-				if (airnowPM25.AQI !== undefined) {
-					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await toEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
-				}
-				else {
-					html_content += `</p>`;
-				}
-				html_content += `<p> PM<sub>10</sub> AQI: ${waqiContent.data.iaqi.pm10?.v} ${await toEmoji(waqiContent.data.iaqi.pm10?.v)}`;
-				if (airnowPM10.AQI !== undefined) {
-					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await toEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
-				}
-				else {
-					html_content += `</p>`;
-				}
-				html_content += `<p> O<sub>3</sub> (ozone) AQI: ${waqiContent.data.iaqi.o3?.v} ${await toEmoji(waqiContent.data.iaqi.o3?.v)}`;
-				if (airnowO3.AQI !== undefined) {
-					html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await toEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
-				}
-				else {
-					html_content += `</p>`;
-				}
-				html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${waqiContent.data.iaqi.no2?.v} ${await toEmoji(waqiContent.data.iaqi.no2?.v)}</p>`;
-				html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${waqiContent.data.iaqi.so2?.v} ${await toEmoji(waqiContent.data.iaqi.so2?.v)}</p>`;
-				html_content += `<p> CO (carbon monoxide) AQI: ${waqiContent.data.iaqi.co?.v} ${await toEmoji(waqiContent.data.iaqi.co?.v)}</p>`;
-				html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiContent.data.time.s} (${waqiContent.data.time.tz})</p>`;
-				if (airnowContent.length > 0) {
-					html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${airnowContent[0].Latitude}&amp;mlon=${airnowContent[0].Longitude}#map=9/${airnowContent[0].Latitude}/${airnowContent[0].Longitude}">${airnowContent[0].ReportingArea}, ${airnowContent[0].StateCode}</a>, measured at ${airnowContent[0].DateObserved} ${airnowContent[0].HourObserved}:00 ${airnowContent[0].LocalTimeZone}</p>`;
-				}
 			} catch (e) {
 				html_content += `<p>Error: ` + e + `</p>`;
 				html_content += `<p>` + (e as Error).stack + `</p>`;
 				console.log({ error_stack: (e as Error).stack });
+			}
+
+			timing.renderWeatherFirstFetch = performance.now() - start;
+			if (typeof waqiResponse !== "undefined" && !waqiResponse.ok) {
+				console.log({ response_url: waqiResponse.url, response_status: waqiResponse.status, response_statusText: waqiResponse.statusText });
+			}
+			if (typeof nwsPointsResponse !== "undefined" && !nwsPointsResponse.ok) {
+				console.log({ response_url: nwsPointsResponse.url, response_status: nwsPointsResponse.status, response_statusText: nwsPointsResponse.statusText });
+			}
+			if (typeof airnowResponse !== "undefined" && !airnowResponse.ok) {
+				console.log({ response_url: airnowResponse.url, response_status: airnowResponse.status, response_statusText: airnowResponse.statusText });
+			}
+
+			const [waqiContent, nwsPointsContent, airnowContent] = await Promise.all([
+				!(typeof waqiResponse == "undefined" || !waqiResponse.ok) ? waqiResponse.json() : undefined,
+				!(typeof nwsPointsResponse == "undefined" || !nwsPointsResponse.ok) ? nwsPointsResponse.json() : undefined,
+				!(typeof airnowResponse == "undefined" || !airnowResponse.ok) ? airnowResponse.json() : undefined,
+			]);
+			// grab weather.gov forecast
+			let nwsForecastResponse = undefined;
+			let nwsForecastContent = undefined;
+			if (typeof nwsPointsResponse !== "undefined" && nwsPointsResponse.ok && "properties" in nwsPointsContent) {
+				try {
+					nwsForecastResponse = await fetch(nwsPointsContent.properties.forecast, nwsRequestInit);
+				} catch (e) {
+					html_content += `<p>Error: ` + e + `</p>`;
+					html_content += `<p>` + (e as Error).stack + `</p>`;
+					console.log({ error_stack: (e as Error).stack });
+				}
+
+				if (typeof nwsForecastResponse !== "undefined" && !nwsForecastResponse.ok) {
+					console.log({ response_url: nwsForecastResponse.url, response_status: nwsForecastResponse.status, response_statusText: nwsForecastResponse.statusText });
+				}
+				nwsForecastContent = !(typeof nwsForecastResponse == "undefined" || !nwsForecastResponse.ok) ? await nwsForecastResponse.json() : undefined;
+
+			}
+			// parse AirNow response
+			const airnowPM25 = {
+				AQI: undefined,
+				category: undefined
+			};
+			const airnowPM10 = {
+				AQI: undefined,
+				category: undefined
+			};
+			const airnowO3 = {
+				AQI: undefined,
+				category: undefined
+			};
+			const airnowOverall = {
+				AQI: undefined,
+				category: undefined
+			};
+			if (typeof airnowContent !== "undefined") {
+				for (let i = 0; i < airnowContent.length; i++) {
+					if (i === 0 || airnowContent[i].AQI > airnowOverall.AQI) {
+						airnowOverall.AQI = airnowContent[i].AQI;
+						airnowOverall.category = airnowContent[i].Category.Name;
+					}
+					if (airnowContent[i].ParameterName === "PM2.5") {
+						airnowPM25.AQI = airnowContent[i].AQI;
+						airnowPM25.category = airnowContent[i].Category.Name;
+					}
+					else if (airnowContent[i].ParameterName === "PM10") {
+						airnowPM10.AQI = airnowContent[i].AQI;
+						airnowPM10.category = airnowContent[i].Category.Name;
+					}
+					else if (airnowContent[i].ParameterName === "O3") {
+						airnowO3.AQI = airnowContent[i].AQI;
+						airnowO3.category = airnowContent[i].Category.Name;
+					}
+				}
+			}
+
+
+			// temperature data
+			const tempF = parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32; //deg C to deg F
+			const humidity = waqiContent.data.iaqi.h?.v;
+			const windSpeed = parseFloat(waqiContent.data.iaqi.w?.v) * 2.23694; // m/s to mph
+			// compute heat index if it's warm enough
+			let heatIndex = 0.5 * (tempF + 61.0 + ((tempF - 68.0) * 1.2) + (humidity * 0.094));
+			if ((tempF + heatIndex) / 2 > 80) {
+				heatIndex = -42.379 + 2.04901523 * tempF + 10.14333127 * humidity - .22475541 * tempF * humidity - .00683783 * tempF * tempF - .05481717 * humidity * humidity + .00122874 * tempF * tempF * humidity + .00085282 * tempF * humidity * humidity - .00000199 * tempF * tempF * humidity * humidity;
+				if (humidity < 13 && tempF > 80 && tempF < 112) {
+					heatIndex -= ((13 - humidity) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17); // low humidity correction
+				}
+				if (humidity > 85 && tempF > 80 && tempF < 87) {
+					heatIndex += ((humidity - 85) / 10) * ((87 - tempF) / 5); // high humidity correction
+				}
+			}
+			// compute wind chill
+			const windChill = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeed, 0.16) + 0.4275 * tempF * Math.pow(windSpeed, 0.16);
+
+			html_content += `<p> Temperature: ` + nf.format(tempF) + `°F (${nf.format(waqiContent.data.iaqi.t?.v)} °C)</p>`;
+			// if within range, print heat index
+			//if (tempF > 80 && humidity > 40) {
+			if (heatIndex > 80) {
+				//const humidityIdx = heatIndexHumidity.findIndex((element) => element > humidity);
+				//const tempIdx = heatIndexTemp.findIndex((element) => element > tempF);
+				//const humidityGrad = (heatIndexTab[humidityIdx][tempIdx-1]-heatIndexTab[humidityIdx-1][tempIdx-1])/(heatIndexHumidity[humidityIdx]-heatIndexHumidity[humidityIdx-1]);
+				//const tempGrad = (heatIndexTab[humidityIdx-1][tempIdx]-heatIndexTab[humidityIdx-1][tempIdx-1])/(heatIndexTemp[tempIdx]-heatIndexTemp[tempIdx-1]);
+				//const heatIndex = heatIndexTab[humidityIdx-1][tempIdx-1] + humidityGrad*(humidity - heatIndexHumidity[humidityIdx-1]) + tempGrad*(tempF - heatIndexTemp[tempIdx-1]);
+				html_content += `<p> Feels like: ${nf.format(heatIndex)}°F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
+			}
+			// if within range, print wind chill
+			if (windChill < 40) {
+				html_content += `<p> Feels like: ${nf.format(windChill)}°F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
+			}
+
+			html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
+			html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
+			if (typeof nwsPointsResponse !== "undefined" && nwsPointsResponse.ok && "properties" in nwsPointsContent) {
+				if (typeof nwsForecastResponse !== "undefined" && nwsForecastResponse.ok && "properties" in nwsForecastContent) {
+					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.properties.gridId}/">Forecast</a>:<br /><ul>`;
+					for (let i = 0; i < 3; i++) {
+						let weatherIcons = ""
+						if (nwsForecastContent.properties.periods[i].icon.includes("day/skc")) {
+							weatherIcons += "🌞";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("night/skc")) {
+							weatherIcons += "🌜";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("day/few")) {
+							weatherIcons += "☀️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("night/few")) {
+							weatherIcons += "🌙";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("day/sct")) {
+							weatherIcons += "⛅";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("night/sct")) {
+							weatherIcons += "🌙☁️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("day/bkn")) {
+							weatherIcons += "🌥️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("night/bkn")) {
+							weatherIcons += "🌙☁️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("day/ovc")) {
+							weatherIcons += "☁️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("night/ovc")) {
+							weatherIcons += "☁️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("wind")) {
+							weatherIcons += "🌬️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("snow")) {
+							weatherIcons += "❄️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("rain")) {
+							weatherIcons += "🌧️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("sleet")) {
+							weatherIcons += "🧊🌨️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("fzra")) {
+							weatherIcons += "🧊🌧️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("tsra")) {
+							weatherIcons += "⛈️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("tornado")) {
+							weatherIcons += "🌪️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("hurricane")) {
+							weatherIcons += "🌀";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("tropical")) {
+							weatherIcons += "🌀";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("dust")) {
+							weatherIcons += "🌫️💨";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("smoke")) {
+							weatherIcons += "🔥🌫️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("haze")) {
+							weatherIcons += "😶‍🌫️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("hot")) {
+							weatherIcons += "🥵";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("cold")) {
+							weatherIcons += "🥶";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("blizzard")) {
+							weatherIcons += "🌬️❄️";
+						}
+						if (nwsForecastContent.properties.periods[i].icon.includes("fog")) {
+							weatherIcons += "🌫️";
+						}
+
+						html_content += `<li>${nwsForecastContent.properties.periods[i].name}: ${weatherIcons} ${nwsForecastContent.properties.periods[i].detailedForecast}</li>`;
+					}
+				}
+				html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsContent.properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsContent.properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+			}
+
+			// air quality data
+			html_content += `<p> Overall AQI: ${waqiContent.data.aqi} ${await toEmoji(waqiContent.data.aqi)}`;
+			if (airnowOverall.AQI !== undefined) {
+				html_content += ` (AirNow AQI: ${airnowOverall.AQI}, ${await toEmoji(airnowOverall.AQI)} ${airnowOverall.category})</p>`;
+			}
+			else {
+				html_content += `</p>`;
+			}
+			html_content += `<p> PM<sub>2.5</sub> AQI: ${waqiContent.data.iaqi.pm25?.v}  ${await toEmoji(waqiContent.data.iaqi.pm25?.v)}`;
+			if (airnowPM25.AQI !== undefined) {
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await toEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
+			}
+			else {
+				html_content += `</p>`;
+			}
+			html_content += `<p> PM<sub>10</sub> AQI: ${waqiContent.data.iaqi.pm10?.v} ${await toEmoji(waqiContent.data.iaqi.pm10?.v)}`;
+			if (airnowPM10.AQI !== undefined) {
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await toEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
+			}
+			else {
+				html_content += `</p>`;
+			}
+			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${waqiContent.data.iaqi.o3?.v} ${await toEmoji(waqiContent.data.iaqi.o3?.v)}`;
+			if (airnowO3.AQI !== undefined) {
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await toEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
+			}
+			else {
+				html_content += `</p>`;
+			}
+			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${waqiContent.data.iaqi.no2?.v} ${await toEmoji(waqiContent.data.iaqi.no2?.v)}</p>`;
+			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${waqiContent.data.iaqi.so2?.v} ${await toEmoji(waqiContent.data.iaqi.so2?.v)}</p>`;
+			html_content += `<p> CO (carbon monoxide) AQI: ${waqiContent.data.iaqi.co?.v} ${await toEmoji(waqiContent.data.iaqi.co?.v)}</p>`;
+			html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiContent.data.time.s} (${waqiContent.data.time.tz})</p>`;
+			if (typeof airnowContent !== "undefined" && airnowContent.length > 0) {
+				html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${airnowContent[0].Latitude}&amp;mlon=${airnowContent[0].Longitude}#map=9/${airnowContent[0].Latitude}/${airnowContent[0].Longitude}">${airnowContent[0].ReportingArea}, ${airnowContent[0].StateCode}</a>, measured at ${airnowContent[0].DateObserved} ${airnowContent[0].HourObserved}:00 ${airnowContent[0].LocalTimeZone}</p>`;
 			}
 			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
