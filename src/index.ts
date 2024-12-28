@@ -25,6 +25,11 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const start = performance.now();
+		const timezone = request.cf.timezone;
+		const localized_date = new Date(
+			new Date().toLocaleString('en-US', { timeZone: timezone })
+		);
+
 		const assetManifest = JSON.parse(manifestJSON)
 		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
@@ -209,11 +214,7 @@ export default {
 		// build HTML *******************************************************
 		async function renderHead() {
 			const start = performance.now();
-			const timezone = request.cf.timezone;
 
-			const localized_date = new Date(
-				new Date().toLocaleString('en-US', { timeZone: timezone })
-			);
 			const hour = localized_date.getHours();
 			let accentColor = '#f6821f';
 			let textColor = 'white';
@@ -256,7 +257,7 @@ export default {
   <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare radar</a>)</p>
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
-  <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${request.cf.timezone}</p>
+  <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${timezone}</p>
   <p> City: ${request.cf.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
   <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>`;
@@ -564,11 +565,12 @@ export default {
 			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.so2?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.so2?.v : undefined)}</p>`;
 			html_content += `<p> CO (carbon monoxide) AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.co?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.co?.v : undefined)}</p>`;
 			if (typeof waqiContent !== 'undefined') {
-				html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiContent.data.time.s} (${waqiContent.data.time.tz})</p>`;
+				const waqiTime = new Date(waqiContent.data.time.iso).toLocaleString('en-US', { timeZone: timezone });
+				html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiTime} ${timezone}</p>`;
 			}
 			if (Array.isArray(airnowContent) && airnowContent.length > 0) {
 				const firstAirnowData = airnowContent[0];
-				html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${firstAirnowData.Latitude}&amp;mlon=${firstAirnowData.Longitude}#map=9/${firstAirnowData.Latitude}/${firstAirnowData.Longitude}">${firstAirnowData.ReportingArea}, ${firstAirnowData.StateCode}</a>, measured at ${firstAirnowData.DateObserved} ${firstAirnowData.HourObserved}:00 ${firstAirnowData.LocalTimeZone}</p>`;
+				html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${firstAirnowData.Latitude}&amp;mlon=${firstAirnowData.Longitude}#map=9/${firstAirnowData.Latitude}/${firstAirnowData.Longitude}">${firstAirnowData.ReportingArea}, ${firstAirnowData.StateCode}</a>, measured at ${firstAirnowData.DateObserved}, ${firstAirnowData.HourObserved}:00 ${firstAirnowData.LocalTimeZone}</p>`;
 			}
 			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
@@ -590,6 +592,7 @@ export default {
 </div>
 </body>
 <footer>
+  <p>Page generated at ${localized_date} ${timezone}</p>
   <p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p><a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
