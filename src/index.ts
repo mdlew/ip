@@ -350,7 +350,7 @@ export default {
 			// parse API responses
 			const waqiContent = waqiResponse && waqiResponse.status === 'fulfilled' && waqiResponse.value.ok ? await waqiResponse.value.json() : undefined 
 			const nwsPointsContent = nwsPointsResponse && nwsPointsResponse.status === 'fulfilled' && nwsPointsResponse.value.ok ? await nwsPointsResponse.value.json() : undefined
-			const airnowContent = airnowResponse && airnowResponse.status === 'fulfilled' && airnowResponse.value.ok ? airnowResponse.value.json() : undefined;
+			const airnowContent = airnowResponse && airnowResponse.status === 'fulfilled' && airnowResponse.value.ok ? await airnowResponse.value.json() : undefined;
 
 			// grab weather.gov forecast
 			let nwsForecastResponse = undefined;
