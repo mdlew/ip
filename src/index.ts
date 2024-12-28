@@ -26,9 +26,6 @@ export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const start = performance.now();
 		const timezone = request.cf.timezone;
-		const localized_date = new Date(
-			new Date().toLocaleString('en-US', { timeZone: timezone })
-		);
 
 		const assetManifest = JSON.parse(manifestJSON)
 		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
@@ -184,7 +181,7 @@ export default {
 			return css + ')';
 		}
 		async function toEmoji(AQI: number) {
-			if (AQI === undefined) {
+			if (AQI == undefined) {
 				return '';	// If undefined, return empty string
 			}
 			else if (AQI <= 50) {
@@ -210,11 +207,36 @@ export default {
 			maximumFractionDigits: 1,
 		});
 
+		// fetch URL helper *******************************************************
+		// adapted from https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Promises
+		async function fetchProducts(url: string, options: RequestInit) {
+			try {
+				// after this line, our function will wait for the `fetch()` call to be settled
+				// the `fetch()` call will either return a Response or log an error
+				const response = await fetch(url, options);
+				if (!response.ok) {
+					console.log({ response_url: response.url, response_status: response.status, response_statusText: response.statusText });
+					return null;
+				} else {
+					// after this line, our function will wait for the `response.json()` call to be settled
+					// the `response.json()` call will either return the parsed JSON object or log an error
+					const data = await response.json();
+					return data;
+				}
+			} catch (e) {
+				console.log({ request_url: url, error: e, error_stack: (e as Error).stack });
+				return null;
+			}
+		}
+
 
 		// build HTML *******************************************************
 		async function renderHead() {
 			const start = performance.now();
 
+			const localized_date = new Date(
+				new Date().toLocaleString('en-US', { timeZone: timezone })
+			);
 			const hour = localized_date.getHours();
 			let accentColor = '#f6821f';
 			let textColor = 'white';
@@ -224,6 +246,7 @@ export default {
 			}
 
 			const html_style = ` body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
+ footer { padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
  #container{display: flex; flex-direction:column;min-height: 100%;}
  body{background: ${await toCSSGradient(hour)};} h1{color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}`;
 			const html_head = `<!DOCTYPE html>
@@ -296,80 +319,36 @@ export default {
 				signal: AbortSignal.timeout(fetchTimeout),
 			};
 
-			let waqiResponse = undefined;
-			let nwsPointsResponse = undefined;
-			let airnowResponse = undefined;
+			// issue concurrent requests to WAQI, NWS, AirNow APIs
+			let waqiContent = undefined;
+			let nwsPointsContent = undefined;
+			let airnowContent = undefined;
 			try {
-				// issue concurrent requests to WAQI, NWS, AirNow APIs
-				[waqiResponse, nwsPointsResponse, airnowResponse] = await Promise.allSettled([
-					fetch(waqiApiRequestUrl, waqiRequestInit),
-					fetch(nwsApiPointsRequestUrl, nwsRequestInit),
-					fetch(airnowApiRequestUrl, airnowRequestInit),
+				[waqiContent, nwsPointsContent, airnowContent] = await Promise.allSettled([
+					fetchProducts(waqiApiRequestUrl, waqiRequestInit),
+					fetchProducts(nwsApiPointsRequestUrl, nwsRequestInit),
+					fetchProducts(airnowApiRequestUrl, airnowRequestInit),
 				]);
-			} catch (e) {
-				html_content += `<p>Error: ` + e + `</p>`;
-				html_content += `<p>` + (e as Error).stack + `</p>`;
-				console.log({ error_stack: (e as Error).stack });
 			}
-
+			catch (e) {
+				html_content += `<p> Error: ${e}</p>`;
+				html_content += `<p> ${(e as Error).stack}</p>`;
+				console.log({ error: e, error_stack: (e as Error).stack });
+			}
 			timing.renderWeatherFirstFetch = performance.now() - start;
-			if (waqiResponse) {
-				if (waqiResponse.status === 'rejected') {
-					console.log({ error: waqiResponse.reason, error_stack: (waqiResponse.reason as Error).stack, response_url: waqiApiRequestUrl });
-					html_content += `<p>Error: ` + waqiResponse.reason + `</p>`;
-					html_content += `<p>` + (waqiResponse.reason as Error).stack + `</p>`;
-				} else if (!waqiResponse.value.ok) {
-					console.log({ response_url: waqiResponse.value.url, response_status: waqiResponse.value.status, response_statusText: waqiResponse.value.statusText });
-				}
-			} else {
-				console.log({ error: 'waqiResponse is undefined' });
-			}
-			if (nwsPointsResponse) {
-				if (nwsPointsResponse.status === 'rejected') {
-					console.log({ error: nwsPointsResponse.reason, error_stack: (nwsPointsResponse.reason as Error).stack, response_url: nwsApiPointsRequestUrl });
-					html_content += `<p>Error: ` + nwsPointsResponse.reason + `</p>`;
-					html_content += `<p>` + (nwsPointsResponse.reason as Error).stack + `</p>`;
-				} else if (!nwsPointsResponse.value.ok) {
-					console.log({ response_url: nwsPointsResponse.value.url, response_status: nwsPointsResponse.value.status, response_statusText: nwsPointsResponse.value.statusText });
-				}
-			} else {
-				console.log({ error: 'nwsPointsResponse is undefined' });
-			}
-			if (airnowResponse) {
-				if (airnowResponse.status === 'rejected') {
-					console.log({ error: airnowResponse.reason, error_stack: (airnowResponse.reason as Error).stack, response_url: airnowApiRequestUrl });
-					html_content += `<p>Error: ` + airnowResponse.reason + `</p>`;
-					html_content += `<p>` + (airnowResponse.reason as Error).stack + `</p>`;
-				} else if (!airnowResponse.value.ok) {
-					console.log({ response_url: airnowResponse.value.url, response_status: airnowResponse.value.status, response_statusText: airnowResponse.value.statusText });
-				}
-			} else {
-				console.log({ error: 'airnowResponse is undefined' });
-			}
 
-			// parse API responses
-			const waqiContent = waqiResponse && waqiResponse.status === 'fulfilled' && waqiResponse.value.ok ? await waqiResponse.value.json() : undefined 
-			const nwsPointsContent = nwsPointsResponse && nwsPointsResponse.status === 'fulfilled' && nwsPointsResponse.value.ok ? await nwsPointsResponse.value.json() : undefined
-			const airnowContent = airnowResponse && airnowResponse.status === 'fulfilled' && airnowResponse.value.ok ? await airnowResponse.value.json() : undefined;
-
-			// grab weather.gov forecast
-			let nwsForecastResponse = undefined;
+			// grab weather.gov forecast, if available
 			let nwsForecastContent = undefined;
-			if (typeof nwsPointsContent !== 'undefined' && 'properties' in nwsPointsContent) {
+			if (!(nwsPointsContent == undefined) && nwsPointsContent.status === 'fulfilled' && !(nwsPointsContent.value == undefined) && 'properties' in nwsPointsContent.value) {
 				try {
-					nwsForecastResponse = await fetch((nwsPointsContent as any).properties.forecast, nwsRequestInit);
+					nwsForecastContent = await fetchProducts(nwsPointsContent.value.properties.forecast, nwsRequestInit);
 				} catch (e) {
-					html_content += `<p>Error: ` + e + `</p>`;
-					html_content += `<p>` + (e as Error).stack + `</p>`;
-					console.log({ error_stack: (e as Error).stack });
+					html_content += `<p> Error: ${e}</p>`;
+					html_content += `<p> ${(e as Error).stack}</p>`;
+					console.log({ request_url: nwsPointsContent.value.properties.forecast, error: e, error_stack: (e as Error).stack });
 				}
-
-				if (typeof nwsForecastResponse !== 'undefined' && !nwsForecastResponse.ok) {
-					console.log({ response_url: nwsForecastResponse.url, response_status: nwsForecastResponse.status, response_statusText: nwsForecastResponse.statusText });
-				}
-				nwsForecastContent = !(typeof nwsForecastResponse == 'undefined' || !nwsForecastResponse.ok) ? await nwsForecastResponse.json() : undefined;
-
 			}
+
 			// parse AirNow response
 			const airnowPM25 = {
 				AQI: undefined,
@@ -387,33 +366,33 @@ export default {
 				AQI: undefined,
 				category: undefined
 			};
-			if (typeof airnowContent !== 'undefined' && Array.isArray(airnowContent)) {
-				for (let i = 0; i < airnowContent.length; i++) {
-					if (i === 0 || airnowContent[i].AQI > (airnowOverall.AQI ?? -1)) {
-						airnowOverall.AQI = airnowContent[i].AQI;
-						airnowOverall.category = airnowContent[i].Category.Name;
+			if (!(airnowContent == undefined) && airnowContent.status === 'fulfilled' && Array.isArray(airnowContent.value)) {
+				for (let i = 0; i < airnowContent.value.length; i++) {
+					if (i === 0 || airnowContent.value[i].AQI > (airnowOverall.AQI ?? -1)) {
+						airnowOverall.AQI = airnowContent.value[i].AQI;
+						airnowOverall.category = airnowContent.value[i].Category.Name;
 					}
-					if (airnowContent[i].ParameterName === 'PM2.5') {
-						airnowPM25.AQI = airnowContent[i].AQI;
-						airnowPM25.category = airnowContent[i].Category.Name;
+					if (airnowContent.value[i].ParameterName.toUpperCase().includes('PM2.5')) {
+						airnowPM25.AQI = airnowContent.value[i].AQI;
+						airnowPM25.category = airnowContent.value[i].Category.Name;
 					}
-					else if (airnowContent[i].ParameterName === 'PM10') {
-						airnowPM10.AQI = airnowContent[i].AQI;
-						airnowPM10.category = airnowContent[i].Category.Name;
+					else if (airnowContent.value[i].ParameterName.toUpperCase().includes('PM10')) {
+						airnowPM10.AQI = airnowContent.value[i].AQI;
+						airnowPM10.category = airnowContent.value[i].Category.Name;
 					}
-					else if (airnowContent[i].ParameterName === 'O3') {
-						airnowO3.AQI = airnowContent[i].AQI;
-						airnowO3.category = airnowContent[i].Category.Name;
+					else if (airnowContent.value[i].ParameterName.toUpperCase().includes('O3')) {
+						airnowO3.AQI = airnowContent.value[i].AQI;
+						airnowO3.category = airnowContent.value[i].Category.Name;
 					}
 				}
 			}
 
 
-
+			const waqiRequestSuccess = !(waqiContent == undefined) && waqiContent.status === 'fulfilled' && !(waqiContent.value == undefined);
 			// temperature data
-			const tempF = typeof waqiContent !== 'undefined' ? parseFloat(waqiContent.data.iaqi.t?.v) * 9 / 5 + 32 : NaN; //deg C to deg F
-			const humidity = typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.h?.v : undefined;
-			const windSpeed = typeof waqiContent !== 'undefined' ? parseFloat(waqiContent.data.iaqi.w?.v) * 2.23694 : NaN; // m/s to mph
+			const tempF = (waqiRequestSuccess) ? parseFloat(waqiContent.value.data.iaqi.t?.v) * 9 / 5 + 32 : NaN; //deg C to deg F
+			const humidity = (waqiRequestSuccess) ? waqiContent.value.data.iaqi.h?.v : NaN;
+			const windSpeed = (waqiRequestSuccess) ? parseFloat(waqiContent.value.data.iaqi.w?.v) * 2.23694 : NaN; // m/s to mph
 			// compute heat index if it's warm enough
 			let heatIndex = 0.5 * (tempF + 61.0 + ((tempF - 68.0) * 1.2) + (humidity * 0.094));
 			if ((tempF + heatIndex) / 2 > 80) {
@@ -428,148 +407,149 @@ export default {
 			// compute wind chill
 			const windChill = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeed, 0.16) + 0.4275 * tempF * Math.pow(windSpeed, 0.16);
 
-			html_content += `<p> Temperature: ` + nf.format(tempF) + `°F (${nf.format(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.t?.v : NaN)} °C)</p>`;
+			html_content += `<p> Temperature: ${nf.format(tempF)} °F (${nf.format((waqiRequestSuccess) ? waqiContent.value.data.iaqi.t?.v : NaN)} °C)</p>`;
 			// if within range, print heat index
 			//if (tempF > 80 && humidity > 40) {
 			if (heatIndex > 80) {
-				html_content += `<p> Feels like: ${nf.format(heatIndex)}°F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
+				html_content += `<p> Feels like: ${nf.format(heatIndex)} °F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
 			}
 			// if within range, print wind chill
 			if (windChill < 40) {
-				html_content += `<p> Feels like: ${nf.format(windChill)}°F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
+				html_content += `<p> Feels like: ${nf.format(windChill)} °F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
 			}
 
 			html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
 			html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-			if (typeof nwsPointsContent !== 'undefined' && 'properties' in nwsPointsContent) {
-				if (typeof nwsForecastContent !== 'undefined' && 'properties' in nwsForecastContent) {
-					html_content += `<p> <a href="https://www.weather.gov/${(nwsPointsContent as any).properties.gridId}/">Forecast</a>:<br /><ul>`;
+			if (!(nwsPointsContent == undefined) && nwsPointsContent.status === 'fulfilled' && 'properties' in nwsPointsContent.value) {
+				if (!(nwsForecastContent == undefined) && 'properties' in nwsForecastContent) {
+					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.value.properties.gridId}/">Forecast</a>:<br /><ul>`;
 
 					for (let i = 0; i < 3; i++) {
+						const weatherIconText = nwsForecastContent.properties.periods[i].icon.toLowerCase();
 						let weatherIcons = ''
-						if (nwsForecastContent.properties.periods[i].icon.includes('day/skc')) {
+						if (weatherIconText.includes('day/skc')) {
 							weatherIcons += '🌞';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('night/skc')) {
+						if (weatherIconText.includes('night/skc')) {
 							weatherIcons += '🌜';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('day/few')) {
+						if (weatherIconText.includes('day/few')) {
 							weatherIcons += '☀️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('night/few')) {
+						if (weatherIconText.includes('night/few')) {
 							weatherIcons += '🌙';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('day/sct')) {
+						if (weatherIconText.includes('day/sct')) {
 							weatherIcons += '⛅';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('night/sct')) {
+						if (weatherIconText.includes('night/sct')) {
 							weatherIcons += '🌙☁️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('day/bkn')) {
+						if (weatherIconText.includes('day/bkn')) {
 							weatherIcons += '🌥️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('night/bkn')) {
+						if (weatherIconText.includes('night/bkn')) {
 							weatherIcons += '🌙☁️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('day/ovc')) {
+						if (weatherIconText.includes('day/ovc')) {
 							weatherIcons += '☁️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('night/ovc')) {
+						if (weatherIconText.includes('night/ovc')) {
 							weatherIcons += '☁️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('wind')) {
+						if (weatherIconText.includes('wind')) {
 							weatherIcons += '🌬️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('snow')) {
+						if (weatherIconText.includes('snow')) {
 							weatherIcons += '❄️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('rain')) {
+						if (weatherIconText.includes('rain')) {
 							weatherIcons += '🌧️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('sleet')) {
+						if (weatherIconText.includes('sleet')) {
 							weatherIcons += '🧊🌨️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('fzra')) {
+						if (weatherIconText.includes('fzra')) {
 							weatherIcons += '🧊🌧️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('tsra')) {
+						if (weatherIconText.includes('tsra')) {
 							weatherIcons += '⛈️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('tornado')) {
+						if (weatherIconText.includes('tornado')) {
 							weatherIcons += '🌪️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('hurricane')) {
+						if (weatherIconText.includes('hurricane')) {
 							weatherIcons += '🌀';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('tropical')) {
+						if (weatherIconText.includes('tropical')) {
 							weatherIcons += '🌀';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('dust')) {
+						if (weatherIconText.includes('dust')) {
 							weatherIcons += '🌫️💨';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('smoke')) {
+						if (weatherIconText.includes('smoke')) {
 							weatherIcons += '🔥🌫️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('haze')) {
+						if (weatherIconText.includes('haze')) {
 							weatherIcons += '😶‍🌫️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('hot')) {
+						if (weatherIconText.includes('hot')) {
 							weatherIcons += '🥵';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('cold')) {
+						if (weatherIconText.includes('cold')) {
 							weatherIcons += '🥶';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('blizzard')) {
+						if (weatherIconText.includes('blizzard')) {
 							weatherIcons += '🌬️❄️';
 						}
-						if (nwsForecastContent.properties.periods[i].icon.includes('fog')) {
+						if (weatherIconText.includes('fog')) {
 							weatherIcons += '🌫️';
 						}
 
 						html_content += `<li>${nwsForecastContent.properties.periods[i].name}: ${weatherIcons} ${nwsForecastContent.properties.periods[i].detailedForecast}</li>`;
 					}
 				}
-				html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${(nwsPointsContent as any).properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${(nwsPointsContent as any).properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+				html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsContent.value.properties.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsContent.value.properties.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
 			}
 
 			// air quality data
-			html_content += `<p> Overall AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.aqi : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.aqi : undefined)}`;
-			if (airnowOverall.AQI !== undefined) {
+			html_content += `<p> Overall AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.aqi : 'N/A'} ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.aqi : undefined)}`;
+			if (!(airnowOverall.AQI == undefined)) {
 				html_content += ` (AirNow AQI: ${airnowOverall.AQI}, ${await toEmoji(airnowOverall.AQI)} ${airnowOverall.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> PM<sub>2.5</sub> AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.pm25?.v : 'N/A'}  ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.pm25?.v : undefined)}`;
-			if (airnowPM25.AQI !== undefined) {
+			html_content += `<p> PM<sub>2.5</sub> AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.iaqi.pm25?.v : 'N/A'}  ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.iaqi.pm25?.v : undefined)}`;
+			if (!(airnowPM25.AQI == undefined)) {
 				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await toEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> PM<sub>10</sub> AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.pm10?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.pm10?.v : undefined)}`;
-			if (airnowPM10.AQI !== undefined) {
+			html_content += `<p> PM<sub>10</sub> AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.iaqi.pm10?.v : 'N/A'} ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.iaqi.pm10?.v : undefined)}`;
+			if (!(airnowPM10.AQI == undefined)) {
 				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await toEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.o3?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.o3?.v : undefined)}`;
-			if (airnowO3.AQI !== undefined) {
+			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.iaqi.o3?.v : 'N/A'} ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.iaqi.o3?.v : undefined)}`;
+			if (!(airnowO3.AQI == undefined)) {
 				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await toEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.no2?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.no2?.v : undefined)}</p>`;
-			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.so2?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.so2?.v : undefined)}</p>`;
-			html_content += `<p> CO (carbon monoxide) AQI: ${typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.co?.v : 'N/A'} ${await toEmoji(typeof waqiContent !== 'undefined' ? waqiContent.data.iaqi.co?.v : undefined)}</p>`;
-			if (typeof waqiContent !== 'undefined') {
-				const waqiTime = new Date(waqiContent.data.time.iso).toLocaleString('en-US', { timeZone: timezone });
-				html_content += `<p> Sensor data from <a href="${waqiContent.data.city.url}">${waqiContent.data.city.name}</a>, measured at ${waqiTime} ${timezone}</p>`;
+			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.iaqi.no2?.v : 'N/A'} ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.iaqi.no2?.v : undefined)}</p>`;
+			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.iaqi.so2?.v : 'N/A'} ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.iaqi.so2?.v : undefined)}</p>`;
+			html_content += `<p> CO (carbon monoxide) AQI: ${(waqiRequestSuccess) ? waqiContent.value.data.iaqi.co?.v : 'N/A'} ${await toEmoji((waqiRequestSuccess) ? waqiContent.value.data.iaqi.co?.v : undefined)}</p>`;
+			if ((waqiRequestSuccess)) {
+				const waqiTime = new Date(waqiContent.value.data.time.iso).toLocaleString('en-US', { timeZone: timezone, timeZoneName: "short" });
+				html_content += `<p> Sensor data from <a href="${waqiContent.value.data.city.url}">${waqiContent.value.data.city.name}</a>, measured at ${waqiTime}</p>`;
 			}
-			if (Array.isArray(airnowContent) && airnowContent.length > 0) {
-				const firstAirnowData = airnowContent[0];
+			if (!(airnowContent == undefined) && airnowContent.status === 'fulfilled' && Array.isArray(airnowContent.value) && airnowContent.value.length > 0) {
+				const firstAirnowData = airnowContent.value[0];
 				html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${firstAirnowData.Latitude}&amp;mlon=${firstAirnowData.Longitude}#map=9/${firstAirnowData.Latitude}/${firstAirnowData.Longitude}">${firstAirnowData.ReportingArea}, ${firstAirnowData.StateCode}</a>, measured at ${firstAirnowData.DateObserved}, ${firstAirnowData.HourObserved}:00 ${firstAirnowData.LocalTimeZone}</p>`;
 			}
 			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
@@ -592,9 +572,9 @@ export default {
 </div>
 </body>
 <footer>
-  <p>Page generated at ${localized_date} ${timezone}</p>
-  <p>Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
-  <p><a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
+  <p> Page generated at ${new Date().toLocaleString('en-US', { timeZone: timezone, timeZoneName: "short" })}</p>
+  <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
+  <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
 </html>`;
 
@@ -637,7 +617,9 @@ export default {
 				});
 			}
 			// Only GET requests work with this proxy.
-			if (request.method !== 'GET') return MethodNotAllowed(request);
+			if (request.method !== 'GET') {
+				return MethodNotAllowed(request);
+			}
 			try {
 				return await getAssetFromKV(
 					{
@@ -703,7 +685,7 @@ export default {
 				'Cross-Origin-Resource-Policy': 'same-site',
 			});
 
-			if (request.cf.tlsVersion !== 'TLSv1.2' && request.cf.tlsVersion !== 'TLSv1.3') {
+			if (!(request.cf.tlsVersion.toUpperCase().includes('TLSV1.2') || request.cf.tlsVersion.toUpperCase().includes('TLSV1.3'))) {
 				console.log({ error: `TLS version error: "${request.cf.tlsVersion}"` });
 				return new Response('You need to use TLS version 1.2 or higher.', {
 					status: 400,
