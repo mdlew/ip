@@ -420,7 +420,7 @@ export default {
 
 			html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
 			html_content += `<p> Wind speed: ${nf.format(windSpeed)} mph</p>`;
-			if (!(nwsPointsContent == undefined) && nwsPointsContent.status === 'fulfilled' && 'properties' in nwsPointsContent.value) {
+			if (!(nwsPointsContent == undefined) && nwsPointsContent.status === 'fulfilled' && !(nwsPointsContent.value == undefined) && 'properties' in nwsPointsContent.value) {
 				if (!(nwsForecastContent == undefined) && 'properties' in nwsForecastContent) {
 					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsContent.value.properties.gridId}/">Forecast</a>:<br /><ul>`;
 
@@ -611,6 +611,7 @@ export default {
 				console.log({ error: `Method ${request.method} not allowed` });
 				return new Response(`Method ${request.method} not allowed.`, {
 					status: 405,
+					statusText: 'Method Not Allowed',
 					headers: {
 						Allow: 'GET',
 					},
@@ -638,7 +639,7 @@ export default {
 				console.log({ error: `"${pathname}" not found`, error_stack: (e as Error).stack });
 				return new Response(`"${pathname}" not found`, {
 					status: 404,
-					statusText: 'not found',
+					statusText: 'Not Found',
 				});
 			}
 		}
@@ -687,8 +688,9 @@ export default {
 
 			if (!(request.cf.tlsVersion.toUpperCase().includes('TLSV1.2') || request.cf.tlsVersion.toUpperCase().includes('TLSV1.3'))) {
 				console.log({ error: `TLS version error: "${request.cf.tlsVersion}"` });
-				return new Response('You need to use TLS version 1.2 or higher.', {
-					status: 400,
+				return new Response('Please use TLS version 1.2 or higher.', {
+					status: 403,
+					statusText: 'Forbidden',
 				});
 			} else if (WORKER_URLS.includes(url.pathname)) {
 				let { readable, writable } = new IdentityTransformStream();
@@ -704,7 +706,7 @@ export default {
 				console.log({ error: `"${pathname}" not found` });
 				return new Response('Not found', {
 					status: 404,
-					statusText: 'Not found',
+					statusText: 'Not Found',
 				});
 			}
 		}
