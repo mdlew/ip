@@ -13,6 +13,7 @@
 
 /* @cloudflare/workers-types package names are included in tsconfig.json */
 import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler'
+// URL is available in the global scope of Cloudflare Workers
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
 
 export interface Env {
@@ -255,9 +256,15 @@ export default {
 				return null;
 			}
 			try {
+				const controller = new AbortController();
+				const timeoutID = setTimeout(() => controller.abort(`Timeout abort`), fetchTimeout);
+
 				// after this line, our function will wait for the `fetch()` call to be settled
 				// the `fetch()` call will either return a Response or log an error
-				const response = await fetch(url, options);
+				// add signal from AbortController to abort after a timeout period
+				const response = await fetch(url, {...options, signal: controller.signal});
+
+				clearTimeout(timeoutID);
 				if (!response.ok) {
 					console.log({ response_url: response.url, response_status: response.status, response_statusText: response.statusText });
 					return null;
@@ -341,7 +348,6 @@ export default {
 				headers: {
 					'content-type': 'application/json;charset=UTF-8',
 				},
-				signal: AbortSignal.timeout(fetchTimeout),
 			};
 			// https://www.weather.gov/documentation/services-web-api API setup
 			const nwsPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
@@ -350,7 +356,6 @@ export default {
 					'accept': 'application/geo+json',
 					'User-Agent': env.NWS_AGENT, // ID to send to weather.gov API
 				},
-				signal: AbortSignal.timeout(fetchTimeout),
 			};
 			// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
 			const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
@@ -359,7 +364,6 @@ export default {
 				headers: {
 					'content-type': 'application/json;charset=UTF-8',
 				},
-				signal: AbortSignal.timeout(fetchTimeout),
 			};
 
 			// issue concurrent requests to WAQI, NWS, AirNow APIs
