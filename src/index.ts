@@ -242,95 +242,95 @@ export default {
 			}
 		}
 		async function nwsForecastIconToEmoji(iconText: string) {
-			let weatherIcons = '';
 			if (iconText == undefined) {
 				return '';	// If undefined, return empty string
 			}
+			let forecastIcons = '';
 			iconText = iconText.toLowerCase();
 			if (iconText.includes('day/skc')) {
-				weatherIcons += '🌞';
+				forecastIcons += '🌞';
 			}
 			if (iconText.includes('night/skc')) {
-				weatherIcons += '🌜';
+				forecastIcons += '🌜';
 			}
 			if (iconText.includes('day/few')) {
-				weatherIcons += '☀️';
+				forecastIcons += '☀️';
 			}
 			if (iconText.includes('night/few')) {
-				weatherIcons += '🌙';
+				forecastIcons += '🌙';
 			}
 			if (iconText.includes('day/sct')) {
-				weatherIcons += '⛅';
+				forecastIcons += '⛅';
 			}
 			if (iconText.includes('night/sct')) {
-				weatherIcons += '🌙☁️';
+				forecastIcons += '🌙☁️';
 			}
 			if (iconText.includes('day/bkn')) {
-				weatherIcons += '🌥️';
+				forecastIcons += '🌥️';
 			}
 			if (iconText.includes('night/bkn')) {
-				weatherIcons += '🌙☁️';
+				forecastIcons += '🌙☁️';
 			}
 			if (iconText.includes('day/ovc')) {
-				weatherIcons += '☁️';
+				forecastIcons += '☁️';
 			}
 			if (iconText.includes('night/ovc')) {
-				weatherIcons += '☁️';
+				forecastIcons += '☁️';
 			}
 			if (iconText.includes('wind')) {
-				weatherIcons += '🌬️';
+				forecastIcons += '🌬️';
 			}
 			if (iconText.includes('snow')) {
-				weatherIcons += '❄️';
+				forecastIcons += '❄️';
 			}
 			if (iconText.includes('rain')) {
-				weatherIcons += '🌧️';
+				forecastIcons += '🌧️';
 			}
 			if (iconText.includes('sleet')) {
-				weatherIcons += '🧊🌨️';
+				forecastIcons += '🧊🌨️';
 			}
 			if (iconText.includes('fzra')) {
-				weatherIcons += '🧊🌧️';
+				forecastIcons += '🧊🌧️';
 			}
 			if (iconText.includes('tsra')) {
-				weatherIcons += '⛈️';
+				forecastIcons += '⛈️';
 			}
 			if (iconText.includes('tornado')) {
-				weatherIcons += '🌪️';
+				forecastIcons += '🌪️';
 			}
 			if (iconText.includes('hurricane')) {
-				weatherIcons += '🌀';
+				forecastIcons += '🌀';
 			}
 			if (iconText.includes('tropical')) {
-				weatherIcons += '🌀';
+				forecastIcons += '🌀';
 			}
 			if (iconText.includes('dust')) {
-				weatherIcons += '🌫️💨';
+				forecastIcons += '🌫️💨';
 			}
 			if (iconText.includes('smoke')) {
-				weatherIcons += '🔥🌫️';
+				forecastIcons += '🔥🌫️';
 			}
 			if (iconText.includes('haze')) {
-				weatherIcons += '😶‍🌫️';
+				forecastIcons += '😶‍🌫️';
 			}
 			if (iconText.includes('hot')) {
-				weatherIcons += '🥵';
+				forecastIcons += '🥵';
 			}
 			if (iconText.includes('cold')) {
-				weatherIcons += '🥶';
+				forecastIcons += '🥶';
 			}
 			if (iconText.includes('blizzard')) {
-				weatherIcons += '🌬️❄️';
+				forecastIcons += '🌬️❄️';
 			}
 			if (iconText.includes('fog')) {
-				weatherIcons += '🌫️';
+				forecastIcons += '🌫️';
 			}
-			return weatherIcons;
+			return forecastIcons;
 		}
 		async function nwsAlertSeverityToEmoji(alertSeverity: string) {
 			if (alertSeverity == undefined) {
 				return '';	// If undefined, return empty string
-			} 
+			}
 			alertSeverity = alertSeverity.toUpperCase();
 			if (alertSeverity.includes('MINOR')) {
 				return '🟡';  // Minor
@@ -347,27 +347,80 @@ export default {
 		async function nwsAlertResponseToEmoji(response: string) {
 			if (response == undefined) {
 				return '';	// If undefined, return empty string
-			} 
+			}
 			response = response.toUpperCase();
 			if (response.includes('ΑLLCLEAR')) {
-				return '🟢';  // All clear
+				return '👌';  // All clear
 			} else if (response.includes('ASSESS')) {
-				return '🟡';  // Assess
+				return '📋';  // Assess
 			} else if (response.includes('MONITOR')) {
-				return '🟠';  // Monitor
+				return '🌐📺📻';  // Monitor
 			} else if (response.includes('AVOID')) {
-				return '🔴';  // Avoid
+				return '⛔';  // Avoid
 			} else if (response.includes('EXECUTE')) {
-				return '🚨';  // Execute
+				return '➡️';  // Execute
 			} else if (response.includes('PREPARE')) {
-				return '🟠';  // Prepare
+				return '⚡🔋🎒🧳';  // Prepare
 			} else if (response.includes('EVACUATE')) {
-				return '🚨';  // Evacuate
+				return '🚨🚗🛣️';  // Evacuate
 			} else if (response.includes('SHELTER')) {
-				return '🚨';  // Shelter
+				return '🚨🏠';  // Shelter
 			} else {
 				return '';  // other
 			}
+		}
+		async function nwsAlertEventToEmoji(event: string) {
+			if (event == undefined) {
+				return '';	// If undefined, return empty string
+			}
+			let eventIcons = '';
+			event = event.toUpperCase();
+			if (event.includes('WINTER')) {
+				eventIcons += '❄️🧊🌨️';  // Winter
+			}
+			if (event.includes('BLIZZARD')) {
+				eventIcons += '🌬️❄️';  // Blizzard
+			}
+			if (event.includes('ICE')) {
+				eventIcons += '🧊🌧️';  // Ice
+			}
+			if (event.includes('COLD')) {
+				eventIcons += '🥶';  // Freeze
+			}
+			if (event.includes('FOG')) {
+				eventIcons += '🌫️';  // Fog
+			}
+			if (event.includes('THUNDERSTORM')) {
+				eventIcons += '⛈️';  // Thunderstorm
+			}
+			if (event.includes('TORNADO')) {
+				eventIcons += '🌪️';  // Tornado
+			}
+			if (event.includes('WIND')) {
+				eventIcons += '🌬️';  // Wind
+			}
+			if (event.includes('FLOOD')) {
+				eventIcons += '🌊';  // Flood
+			}
+			if (event.includes('HEAT')) {
+				eventIcons += '🥵';  // Heat
+			}
+			if (event.includes('TROPICAL')) {
+				eventIcons += '🌀';  // Tropical
+			}
+			if (event.includes('HURRICANE')) {
+				eventIcons += '🌀';  // Hurricane
+			}
+			if (event.includes('ADVISORY')) {
+				eventIcons += '⚠️';  // Advisory
+			}
+			if (event.includes('WATCH')) {
+				eventIcons += '👀';  // Watch
+			}
+			if (event.includes('WARNING')) {
+				eventIcons += '🚨';  // Warning
+			}
+			return eventIcons;
 		}
 		const intFormatTwoDigit = new Intl.NumberFormat('en-US', {
 			minimumIntegerDigits: 2,
@@ -428,7 +481,7 @@ export default {
  .collapsible {  background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none; }
  .active, .collapsible:hover {  background-color: #59230B;}
  .collapsible:after {  content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {  content: '➖';}
- .content {  padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  background-color: #8A3B12;}`;
+ .content {  padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}`;
 			const html_head = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -483,7 +536,6 @@ export default {
 			};
 			// https://www.weather.gov/documentation/services-web-api API setup
 			const nwsPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
-			const nwsAlertRequestUrl = `https://api.weather.gov/alerts/active?point=${latitude},${longitude}`;
 			const nwsRequestInit = {
 				headers: {
 					'accept': 'application/geo+json',
@@ -506,8 +558,8 @@ export default {
 			try {
 				[waqiData, nwsPointsData, airnowSensorData] = await Promise.allSettled([
 					fetchProducts(waqiApiRequestUrl, waqiRequestInit, true),
-					fetchProducts(nwsPointsRequestUrl, nwsRequestInit, request.cf.continent.toUpperCase().includes('NA')),
-					fetchProducts(airnowSensorRequestUrl, airnowRequestInit, request.cf.continent.toUpperCase().includes('NA')),
+					fetchProducts(nwsPointsRequestUrl, nwsRequestInit, request.cf?.country.toUpperCase().includes('US')),
+					fetchProducts(airnowSensorRequestUrl, airnowRequestInit, request.cf?.country.toUpperCase().includes('US')),
 				]);
 			}
 			catch (e) {
@@ -521,6 +573,12 @@ export default {
 			timing.renderWeatherFirstFetch = performance.now() - start;
 
 			// grab NWS, airnow forecasts if available
+			let nwsCounty = undefined;
+			if (nwsPointsRequestSuccess) {
+				nwsCounty = nwsPointsData?.value.properties.county.split('/');
+				nwsCounty = nwsCounty[nwsCounty.length - 1];
+			}
+			const nwsAlertRequestUrl = `https://api.weather.gov/alerts/active/zone/${nwsCounty}`;
 			let nwsAlertData = undefined;
 			let nwsForecastData = undefined;
 			let airnowForecastData = undefined;
@@ -619,7 +677,7 @@ export default {
 					html_content += `<li>Alerts ⚠️`;
 					for (let i = 0; i < nwsAlertData?.value.features.length; i++) {
 						let alertInfo = nwsAlertData?.value.features[i].properties
-						html_content += `<br /><button class="collapsible"> ${alertInfo?.response} ${await nwsAlertResponseToEmoji(alertInfo?.response)}, ${alertInfo?.severity} ${await nwsAlertSeverityToEmoji(alertInfo?.severity)}: ${alertInfo?.headline}</button><div class="content"><h3>${alertInfo?.event}</h3><p>${alertInfo?.description}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${alertInfo?.status}, Urgency: ${alertInfo?.urgency}, Certainty: ${alertInfo?.certainty}</p><p>Onset: ${dateFormat.format(new Date(alertInfo?.onset))}, Ends: ${dateFormat.format(new Date(alertInfo?.ends))}</p><p>Affected areas: ${alertInfo?.areaDesc}</p><p>Sender: ${alertInfo?.senderName}, Sent: ${dateFormat.format(new Date(alertInfo?.sent))}, Expires: ${dateFormat.format(new Date(alertInfo?.expires))}</p></div>`;
+						html_content += `<br /><button class="collapsible"> ${alertInfo?.response} ${await nwsAlertResponseToEmoji(alertInfo?.response)}, ${alertInfo?.severity} ${await nwsAlertSeverityToEmoji(alertInfo?.severity)}: ${alertInfo?.headline}</button><div class="content"><h3>${alertInfo?.event} ${await nwsAlertEventToEmoji(alertInfo?.event)}</h3><p>${alertInfo?.description}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${alertInfo?.status}, Urgency: ${alertInfo?.urgency}, Certainty: ${alertInfo?.certainty}</p><p>Onset: ${dateFormat.format(new Date(alertInfo?.onset))}, Ends: ${dateFormat.format(new Date(alertInfo?.ends))}</p><p>Affected areas: ${alertInfo?.areaDesc}</p><p>Sender: ${alertInfo?.senderName}, Sent: ${dateFormat.format(new Date(alertInfo?.sent))}, Expires: ${dateFormat.format(new Date(alertInfo?.expires))}</p></div>`;
 					}
 					html_content += `</li>`;
 				}
