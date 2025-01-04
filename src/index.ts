@@ -524,7 +524,12 @@ export default {
 
 		async function renderWeather() {
 			const start = performance.now();
-			const airnowDateStr = `${localized_date.getFullYear()}-${intFormatTwoDigit.format(localized_date.getMonth() + 1)}-${intFormatTwoDigit.format(localized_date.getDate())}`;
+			const tomorrow = new Date(localized_date);
+			tomorrow.setDate(localized_date.getDate() + 1);
+			const airnowDateStr = [
+				`${localized_date.getFullYear()}-${intFormatTwoDigit.format(localized_date.getMonth() + 1)}-${intFormatTwoDigit.format(localized_date.getDate())}`,
+				`${tomorrow.getFullYear()}-${intFormatTwoDigit.format(tomorrow.getMonth() + 1)}-${intFormatTwoDigit.format(tomorrow.getDate())}`
+			];
 
 			let html_content = '  <h1>Weather 🌦</h1>';
 			// WAQI API setup https://aqicn.org/api/
@@ -544,7 +549,7 @@ export default {
 			};
 			// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
 			const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
-			const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${latitude}&longitude=${longitude}&date=${airnowDateStr}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+			const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${latitude}&longitude=${longitude}&date=&distance=75&API_KEY=${env.AIRNOW_KEY}`;
 			const airnowRequestInit = {
 				headers: {
 					'content-type': 'application/json;charset=UTF-8',
@@ -726,23 +731,40 @@ export default {
 			if (airnowForecastRequestSuccess) {
 				const firstAirnowData = airnowForecastData?.value[0];
 				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowData.Latitude}&amp;mlon=${firstAirnowData.Longitude}#map=9/${firstAirnowData.Latitude}/${firstAirnowData.Longitude}">${firstAirnowData.ReportingArea}, ${firstAirnowData.StateCode}</a>:<br /><ul>`;
-				if (firstAirnowData.ActionDay) {
-					html_content += `<li>Action day ⚠️</li>`;
+				let airnowDateIdx = 0;
+				let newDate = true;
+				for (let i = 0; i < airnowForecastData?.value.length; i++) {
+					let currAirnowData = airnowForecastData?.value[i];
+					// check if we should increment date
+					if (airnowDateIdx < airnowDateStr.length - 1 && currAirnowData.DateForecast === airnowDateStr[airnowDateIdx + 1]) {
+						html_content += `</li>`;
+						newDate = true;
+						airnowDateIdx++;
+					}
+					// if date matches, then push data to HTML
+					if (currAirnowData?.DateForecast === airnowDateStr[airnowDateIdx]) {
+						if (newDate) {
+							html_content += `<li>${airnowDateStr[airnowDateIdx]}: `;
+							if (currAirnowData?.ActionDay) {
+								html_content += `Action day ⚠️<br />`;
+							}
+							newDate = false;
+						} else {
+							html_content += `, `;
+						}
+						html_content += `${currAirnowData.ParameterName}: ${currAirnowData.Category.Name} ${await aqiCategoryToEmoji(currAirnowData.Category.Number)}`;
+						if (currAirnowData?.AQI > 0) {
+							html_content += ` (AQI ${currAirnowData.AQI})`
+						}
+					}
 				}
-				if (!(firstAirnowData.Discussion == undefined) && !(firstAirnowData.Discussion === '')) {
+				html_content += `</li>`;
+				// add discussion if available
+				if (!(firstAirnowData?.Discussion == undefined) && !(firstAirnowData?.Discussion === '')) {
 					if (URL.canParse(firstAirnowData.Discussion)) {
 						html_content += `<li><a href="${firstAirnowData.Discussion}">Discussion: ${firstAirnowData.Discussion}</a></li>`;
 					} else {
 						html_content += `<li><button class="collapsible">Discussion</button><div class="content"><p>${firstAirnowData.Discussion}</p></div></li>`;
-					}
-				}
-				for (let i = 0; i < airnowForecastData?.value.length; i++) {
-					if (airnowForecastData?.value[i].DateForecast === airnowDateStr) {
-						html_content += `<li>${airnowForecastData.value[i].ParameterName}: ${airnowForecastData.value[i].Category.Name} ${await aqiCategoryToEmoji(airnowForecastData.value[i].Category.Number)}`;
-						if (airnowForecastData.value[i].AQI > 0) {
-							html_content += ` (AQI ${airnowForecastData.value[i].AQI})`
-						}
-						html_content += `</li>`;
 					}
 				}
 				html_content += `</ul></p>`;
