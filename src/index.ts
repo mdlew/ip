@@ -45,15 +45,40 @@ export default {
 		const assetManifest = JSON.parse(manifestJSON)
 		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
+		// pull location data, use to generate API requests
 		const latitude = request.cf.latitude;
 		const longitude = request.cf.longitude;
+		// WAQI API setup https://aqicn.org/api/
+		const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
+		const waqiRequestInit = {
+			headers: {
+				'content-type': 'application/json;charset=UTF-8',
+			},
+		};
+		// https://www.weather.gov/documentation/services-web-api API setup
+		const nwsPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
+		const nwsRequestInit = {
+			headers: {
+				'accept': 'application/geo+json',
+				'User-Agent': env.NWS_AGENT, // ID to send to weather.gov API
+			},
+		};
+		// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
+		const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+		const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${latitude}&longitude=${longitude}&date=&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+		const airnowRequestInit = {
+			headers: {
+				'content-type': 'application/json;charset=UTF-8',
+			},
+		};
+
 
 		// performance JSON object
 		const timing = {
 			renderHead: NaN,
 			renderGeolocation: NaN,
-			renderWeatherFirstFetch: NaN,
 			renderWeather: NaN,
+			renderForecast: NaN,
 			renderFooter: NaN,
 			renderTotal: NaN,
 		}
@@ -526,39 +551,6 @@ export default {
 			const start = performance.now();
 			let html_content = '  <h1>Weather 🌦</h1>';
 
-			// prepare to fetch data from APIs
-			const tomorrow = new Date(localized_date);
-			tomorrow.setDate(localized_date.getDate() + 1);
-			const airnowDateStr = [
-				`${localized_date.getFullYear()}-${intFormatTwoDigit.format(localized_date.getMonth() + 1)}-${intFormatTwoDigit.format(localized_date.getDate())}`,
-				`${tomorrow.getFullYear()}-${intFormatTwoDigit.format(tomorrow.getMonth() + 1)}-${intFormatTwoDigit.format(tomorrow.getDate())}`
-			];
-			const dayStr = ['Today', 'Tomorrow'];
-
-			// WAQI API setup https://aqicn.org/api/
-			const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
-			const waqiRequestInit = {
-				headers: {
-					'content-type': 'application/json;charset=UTF-8',
-				},
-			};
-			// https://www.weather.gov/documentation/services-web-api API setup
-			const nwsPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
-			const nwsRequestInit = {
-				headers: {
-					'accept': 'application/geo+json',
-					'User-Agent': env.NWS_AGENT, // ID to send to weather.gov API
-				},
-			};
-			// AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
-			const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
-			const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${latitude}&longitude=${longitude}&date=&distance=75&API_KEY=${env.AIRNOW_KEY}`;
-			const airnowRequestInit = {
-				headers: {
-					'content-type': 'application/json;charset=UTF-8',
-				},
-			};
-
 			// issue concurrent requests to WAQI, NWS, AirNow APIs
 			let waqiData = undefined;
 			let nwsPointsData = undefined;
@@ -584,11 +576,8 @@ export default {
 			} else {
 				waqiData = undefined;
 			}
-			let nwsCounty = undefined;
 			if (nwsPointsRequestSuccess) {
 				nwsPointsData = nwsPointsData?.value.properties;
-				nwsCounty = nwsPointsData.county.split('/');
-				nwsCounty = nwsCounty[nwsCounty.length - 1];
 			} else {
 				nwsPointsData = undefined;
 			}
@@ -596,43 +585,6 @@ export default {
 				airnowSensorData = airnowSensorData?.value;
 			} else {
 				airnowSensorData = undefined;
-			}
-			timing.renderWeatherFirstFetch = performance.now() - start;
-
-			// grab NWS, airnow forecasts if available
-			const nwsAlertRequestUrl = `https://api.weather.gov/alerts/active/zone/${nwsCounty}`;
-			let nwsAlertData = undefined;
-			let nwsForecastData = undefined;
-			let airnowForecastData = undefined;
-			try {
-				[nwsAlertData, nwsForecastData, airnowForecastData] = await Promise.allSettled([
-					fetchProducts(nwsAlertRequestUrl, nwsRequestInit, nwsPointsRequestSuccess),
-					fetchProducts(nwsPointsRequestSuccess ? nwsPointsData.forecast : undefined, nwsRequestInit, nwsPointsRequestSuccess),
-					fetchProducts(airnowForecastRequestUrl, airnowRequestInit, airnowSensorRequestSuccess),
-				]);
-			} catch (e) {
-				html_content += `<p> Error: ${e}</p>`;
-				html_content += `<p> ${(e as Error).stack}</p>`;
-				console.log({ error: e, error_stack: (e as Error).stack });
-			}
-			const nwsAlertRequestSuccess = !(nwsAlertData == undefined) && nwsAlertData.status === 'fulfilled' && Array.isArray(nwsAlertData.value?.features) && nwsAlertData.value.features.length > 0;
-			const nwsForecastRequestSuccess = !(nwsForecastData == undefined) && nwsForecastData.status === 'fulfilled' && !(nwsForecastData.value == undefined) && 'properties' in nwsForecastData.value
-			const airnowForecastRequestSuccess = !(airnowForecastData == undefined) && airnowForecastData.status === 'fulfilled' && Array.isArray(airnowForecastData.value) && airnowForecastData.value.length > 0;
-			// parse responses if successful
-			if (nwsAlertRequestSuccess) {
-				nwsAlertData = nwsAlertData?.value.features;
-			} else {
-				nwsAlertData = undefined;
-			}
-			if (nwsForecastRequestSuccess) {
-				nwsForecastData = nwsForecastData?.value.properties;
-			} else {
-				nwsForecastData = undefined;
-			}
-			if (airnowForecastRequestSuccess) {
-				airnowForecastData = airnowForecastData?.value;
-			} else {
-				airnowForecastData = undefined;
 			}
 
 			// ********************************************************************************************************************
@@ -653,7 +605,7 @@ export default {
 				AQI: undefined,
 				category: undefined
 			};
-			if (airnowSensorRequestSuccess) {
+			if (!(airnowSensorData == undefined)) {
 				for (let i = 0; i < airnowSensorData.length; i++) {
 					if (i === 0 || airnowSensorData[i]?.AQI > (airnowOverall.AQI ?? -1)) {
 						airnowOverall.AQI = airnowSensorData[i]?.AQI;
@@ -675,11 +627,10 @@ export default {
 				}
 			}
 
-
 			// temperature data
-			const tempF = (waqiRequestSuccess) ? parseFloat(waqiData.iaqi.t?.v) * 9 / 5 + 32 : NaN; //deg C to deg F
-			const humidity = (waqiRequestSuccess) ? waqiData.iaqi.h?.v : NaN;
-			const windSpeed = (waqiRequestSuccess) ? parseFloat(waqiData.iaqi.w?.v) * 2.23694 : NaN; // m/s to mph
+			const tempF = !(waqiData == undefined) ? parseFloat(waqiData.iaqi.t?.v) * 9 / 5 + 32 : NaN; //deg C to deg F
+			const humidity = !(waqiData == undefined) ? waqiData.iaqi.h?.v : NaN;
+			const windSpeed = !(waqiData == undefined) ? parseFloat(waqiData.iaqi.w?.v) * 2.23694 : NaN; // m/s to mph
 			// compute heat index if it's warm enough
 			let heatIndex = 0.5 * (tempF + 61.0 + ((tempF - 68.0) * 1.2) + (humidity * 0.094));
 			if ((tempF + heatIndex) / 2 > 80) {
@@ -696,7 +647,7 @@ export default {
 
 			// ********************************************************************************************************************
 			// build HTML content
-			html_content += `<p> Temperature: ${floatFormat.format(tempF)} °F (${floatFormat.format((waqiRequestSuccess) ? waqiData.iaqi.t?.v : NaN)} °C)</p>`;
+			html_content += `<p> Temperature: ${floatFormat.format(tempF)} °F (${floatFormat.format(!(waqiData == undefined) ? waqiData.iaqi.t?.v : NaN)} °C)</p>`;
 			// if within range, print heat index
 			//if (tempF > 80 && humidity > 40) {
 			if (heatIndex > 80) {
@@ -709,70 +660,187 @@ export default {
 
 			html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
 			html_content += `<p> Wind speed: ${floatFormat.format(windSpeed)} mph</p>`;
-			if (nwsPointsRequestSuccess) {
-				if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
-					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">NWS forecast</a>:<br /><ul>`;
-				}
-				// parse alert data
-				if (nwsAlertRequestSuccess) {
-					html_content += `<li>Alerts ⚠️`;
-					for (let i = 0; i < nwsAlertData.length; i++) {
-						let alertInfo = nwsAlertData[i].properties
-						html_content += `<br /><button class="collapsible"> ${alertInfo?.response} ${await nwsAlertResponseToEmoji(alertInfo?.response)}, ${alertInfo?.severity} ${await nwsAlertSeverityToEmoji(alertInfo?.severity)}: ${alertInfo?.headline}</button><div class="content"><h3>${alertInfo?.event} ${await nwsAlertEventToEmoji(alertInfo?.event)}</h3><p>${alertInfo?.description}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${alertInfo?.status}, Urgency: ${alertInfo?.urgency}, Certainty: ${alertInfo?.certainty}</p><p>Onset: ${dateFormat.format(new Date(alertInfo?.onset))}, Ends: ${dateFormat.format(new Date(alertInfo?.ends))}</p><p>Affected areas: ${alertInfo?.areaDesc}</p><p>Sender: ${alertInfo?.senderName}, Sent: ${dateFormat.format(new Date(alertInfo?.sent))}, Expires: ${dateFormat.format(new Date(alertInfo?.expires))}</p></div>`;
-					}
-					html_content += `</li>`;
-				}
-				// parse forecast data
-				if (nwsForecastRequestSuccess) {
-					for (let i = 0; i < 3; i++) {
-						html_content += `<li>${nwsForecastData.periods[i].name}: ${await nwsForecastIconToEmoji(nwsForecastData.periods[i].icon)} ${nwsForecastData.periods[i].detailedForecast}</li>`;
-					}
-				}
-				html_content += `</ul></p><p><a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsData?.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
-			}
 
 			// air quality data
-			html_content += `<p> Overall AQI: ${(waqiRequestSuccess) ? waqiData.aqi : 'N/A'} ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.aqi : undefined)}`;
+			html_content += `<p> Overall AQI: ${!(waqiData == undefined) ? waqiData.aqi : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.aqi : undefined)}`;
 			if (!(airnowOverall.AQI == undefined)) {
 				html_content += ` (AirNow AQI: ${airnowOverall.AQI}, ${await aqiToEmoji(airnowOverall.AQI)} ${airnowOverall.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> PM<sub>2.5</sub> AQI: ${(waqiRequestSuccess) ? waqiData.iaqi.pm25?.v : 'N/A'}  ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.iaqi.pm25?.v : undefined)}`;
+			html_content += `<p> PM<sub>2.5</sub> AQI: ${!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : 'N/A'}  ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined)}`;
 			if (!(airnowPM25.AQI == undefined)) {
 				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> PM<sub>10</sub> AQI: ${(waqiRequestSuccess) ? waqiData.iaqi.pm10?.v : 'N/A'} ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.iaqi.pm10?.v : undefined)}`;
+			html_content += `<p> PM<sub>10</sub> AQI: ${!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined)}`;
 			if (!(airnowPM10.AQI == undefined)) {
 				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${(waqiRequestSuccess) ? waqiData.iaqi.o3?.v : 'N/A'} ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.iaqi.o3?.v : undefined)}`;
+			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.o3?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined)}`;
 			if (!(airnowO3.AQI == undefined)) {
 				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${(waqiRequestSuccess) ? waqiData.iaqi.no2?.v : 'N/A'} ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.iaqi.no2?.v : undefined)}</p>`;
-			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${(waqiRequestSuccess) ? waqiData.iaqi.so2?.v : 'N/A'} ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.iaqi.so2?.v : undefined)}</p>`;
-			html_content += `<p> CO (carbon monoxide) AQI: ${(waqiRequestSuccess) ? waqiData.iaqi.co?.v : 'N/A'} ${await aqiToEmoji((waqiRequestSuccess) ? waqiData.iaqi.co?.v : undefined)}</p>`;
+			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.no2?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.no2?.v : undefined)}</p>`;
+			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.so2?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.so2?.v : undefined)}</p>`;
+			html_content += `<p> CO (carbon monoxide) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.co?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.co?.v : undefined)}</p>`;
+
+			// add NWS radar loop if available
+			if (!(nwsPointsData == undefined)) {
+				html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsData?.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+			}
+
+			if (!(waqiData == undefined)) {
+				const waqiTime = dateFormat.format(new Date(waqiData.time.iso));
+				html_content += `<p> Sensor data from <a href="${waqiData.city.url}">${waqiData.city.name}</a>, measured on ${waqiTime}</p>`;
+			}
+			if (!(airnowSensorData == undefined)) {
+				const firstAirnowSensor = airnowSensorData[0];
+				html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${firstAirnowSensor.Latitude}&amp;mlon=${firstAirnowSensor.Longitude}#map=9/${firstAirnowSensor.Latitude}/${firstAirnowSensor.Longitude}">${firstAirnowSensor.ReportingArea}, ${firstAirnowSensor.StateCode}</a>, measured on ${firstAirnowSensor.DateObserved}, ${firstAirnowSensor.HourObserved}:00 ${firstAirnowSensor.LocalTimeZone}</p>`;
+			}
+			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
+
+			timing.renderWeather = performance.now() - start;
+			return [html_content, waqiData, nwsPointsData, airnowSensorData];
+		}
+
+		async function renderForecast(
+			waqiData: any,
+			nwsPointsData: any,
+			airnowSensorData: any
+		): Promise<string> {
+			const start = performance.now();
+
+			// prepare to fetch data from APIs
+			const tomorrow = new Date(localized_date);
+			tomorrow.setDate(localized_date.getDate() + 1);
+			const airnowDateStr = [
+				`${localized_date.getFullYear()}-${intFormatTwoDigit.format(localized_date.getMonth() + 1)}-${intFormatTwoDigit.format(localized_date.getDate())}`,
+				`${tomorrow.getFullYear()}-${intFormatTwoDigit.format(tomorrow.getMonth() + 1)}-${intFormatTwoDigit.format(tomorrow.getDate())}`
+			];
+			const dayStr = ['Today', 'Tomorrow'];
+
+			let html_content = '';
+			let nwsCounty = undefined;
+			if (!(nwsPointsData == undefined)) {
+				nwsCounty = nwsPointsData.county.split('/');
+				nwsCounty = nwsCounty ? nwsCounty[nwsCounty.length - 1] : undefined;
+			}
+
+			// grab NWS, airnow forecasts if available
+			const nwsAlertRequestUrl = `https://api.weather.gov/alerts/active/zone/${nwsCounty}`;
+			let nwsAlertData = undefined;
+			let nwsForecastData = undefined;
+			let airnowForecastData = undefined;
+			try {
+				[nwsAlertData, nwsForecastData, airnowForecastData] = await Promise.allSettled([
+					fetchProducts(nwsAlertRequestUrl, nwsRequestInit, !(nwsPointsData == undefined)),
+					fetchProducts(
+						!(nwsPointsData == undefined) ? nwsPointsData.forecast : undefined,
+						nwsRequestInit,
+						!(nwsPointsData == undefined)
+					),
+					fetchProducts(airnowForecastRequestUrl, airnowRequestInit, !(airnowSensorData == undefined)),
+				]);
+			} catch (e) {
+				html_content += `<p> Error: ${e}</p>`;
+				html_content += `<p> ${(e as Error).stack}</p>`;
+				console.log({ error: e, error_stack: (e as Error).stack });
+			}
+			const nwsAlertRequestSuccess =
+				!(nwsAlertData == undefined) &&
+				nwsAlertData.status === 'fulfilled' &&
+				Array.isArray(nwsAlertData.value?.features) &&
+				nwsAlertData.value.features.length > 0;
+			const nwsForecastRequestSuccess =
+				!(nwsForecastData == undefined) &&
+				nwsForecastData.status === 'fulfilled' &&
+				!(nwsForecastData.value == undefined) &&
+				'properties' in nwsForecastData.value;
+			const airnowForecastRequestSuccess =
+				!(airnowForecastData == undefined) &&
+				airnowForecastData.status === 'fulfilled' &&
+				Array.isArray(airnowForecastData.value) &&
+				airnowForecastData.value.length > 0;
+			// parse responses if successful
+			if (nwsAlertRequestSuccess) {
+				nwsAlertData = nwsAlertData?.value.features;
+			} else {
+				nwsAlertData = undefined;
+			}
+			if (nwsForecastRequestSuccess) {
+				nwsForecastData = nwsForecastData?.value.properties;
+			} else {
+				nwsForecastData = undefined;
+			}
+			if (airnowForecastRequestSuccess) {
+				airnowForecastData = airnowForecastData?.value;
+			} else {
+				airnowForecastData = undefined;
+			}
+
+			// ********************************************************************************************************************
+			// build HTML content
+			if (nwsAlertRequestSuccess || nwsForecastRequestSuccess || airnowForecastRequestSuccess) {
+				html_content += ` <h3>Forecast 🔮</h3>`;
+			}
+			if (!(nwsPointsData == undefined)) {
+				if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
+					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">NWS</a>:<br /><ul>`;
+				}
+				// parse alert data
+				if (nwsAlertRequestSuccess) {
+					html_content += `<li>Alerts ⚠️`;
+					for (let i = 0; i < nwsAlertData.length; i++) {
+						let alertInfo = nwsAlertData[i].properties;
+						html_content += `<br /><button class="collapsible"> ${alertInfo?.response} ${await nwsAlertResponseToEmoji(
+							alertInfo?.response
+						)}, ${alertInfo?.severity} ${await nwsAlertSeverityToEmoji(alertInfo?.severity)}: ${alertInfo?.headline
+							}</button><div class="content"><h3>${alertInfo?.event} ${await nwsAlertEventToEmoji(
+								alertInfo?.event
+							)}</h3><p>${alertInfo?.description}</p><p>Instruction: ${alertInfo?.instruction
+							}</p><p>Status: ${alertInfo?.status}, Urgency: ${alertInfo?.urgency}, Certainty: ${alertInfo?.certainty
+							}</p><p>Onset: ${dateFormat.format(new Date(alertInfo?.onset))}, Ends: ${dateFormat.format(
+								new Date(alertInfo?.ends)
+							)}</p><p>Affected areas: ${alertInfo?.areaDesc}</p><p>Sender: ${alertInfo?.senderName
+							}, Sent: ${dateFormat.format(new Date(alertInfo?.sent))}, Expires: ${dateFormat.format(
+								new Date(alertInfo?.expires)
+							)}</p></div>`;
+					}
+					html_content += `</li>`;
+				}
+				// parse forecast data
+				if (nwsForecastRequestSuccess) {
+					for (let i = 0; i < Math.min(4, nwsForecastData.periods.length); i++) {
+						html_content += `<li>${nwsForecastData.periods[i].name}: ${await nwsForecastIconToEmoji(
+							nwsForecastData.periods[i].icon
+						)} ${nwsForecastData.periods[i].detailedForecast}</li>`;
+					}
+				}
+				html_content += `</ul></p>`;
+			}
 
 			if (airnowForecastRequestSuccess) {
-				const firstAirnowData = airnowForecastData[0];
-				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowData.Latitude}&amp;mlon=${firstAirnowData.Longitude}#map=9/${firstAirnowData.Latitude}/${firstAirnowData.Longitude}">${firstAirnowData.ReportingArea}, ${firstAirnowData.StateCode}</a>:<br /><ul>`;
+				const firstAirnowForecast = airnowForecastData[0];
+				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a>:<br /><ul>`;
 				let airnowDateIdx = 0;
 				let newDate = true;
 				for (let i = 0; i < airnowForecastData.length; i++) {
 					let currAirnowData = airnowForecastData[i];
 					// check if we should increment date
-					if (airnowDateIdx < airnowDateStr.length - 1 && currAirnowData.DateForecast === airnowDateStr[airnowDateIdx + 1]) {
+					if (
+						airnowDateIdx < airnowDateStr.length - 1 &&
+						currAirnowData.DateForecast === airnowDateStr[airnowDateIdx + 1]
+					) {
 						html_content += `</li>`;
 						newDate = true;
 						airnowDateIdx++;
@@ -788,35 +856,27 @@ export default {
 						} else {
 							html_content += `, `;
 						}
-						html_content += `${currAirnowData.ParameterName}: ${currAirnowData.Category.Name} ${await aqiCategoryToEmoji(currAirnowData.Category.Number)}`;
+						html_content += `${currAirnowData.ParameterName}: ${currAirnowData.Category.Name} ${await aqiCategoryToEmoji(
+							currAirnowData.Category.Number
+						)}`;
 						if (currAirnowData?.AQI > 0) {
-							html_content += ` (AQI ${currAirnowData.AQI})`
+							html_content += ` (AQI ${currAirnowData.AQI})`;
 						}
 					}
 				}
 				html_content += `</li>`;
 				// add discussion if available
-				if (!(firstAirnowData?.Discussion == undefined) && !(firstAirnowData?.Discussion === '')) {
-					if (URL.canParse(firstAirnowData.Discussion)) {
-						html_content += `<li><a href="${firstAirnowData.Discussion}">Discussion: ${firstAirnowData.Discussion}</a></li>`;
+				if (!(firstAirnowForecast?.Discussion == undefined) && !(firstAirnowForecast?.Discussion === '')) {
+					if (URL.canParse(firstAirnowForecast.Discussion)) {
+						html_content += `<li><a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></li>`;
 					} else {
-						html_content += `<li><button class="collapsible">Discussion</button><div class="content"><p>${firstAirnowData.Discussion}</p></div></li>`;
+						html_content += `<li><button class="collapsible">Discussion</button><div class="content"><p>${firstAirnowForecast.Discussion}</p></div></li>`;
 					}
 				}
 				html_content += `</ul></p>`;
 			}
 
-			if ((waqiRequestSuccess)) {
-				const waqiTime = dateFormat.format(new Date(waqiData.time.iso));
-				html_content += `<p> Sensor data from <a href="${waqiData.city.url}">${waqiData.city.name}</a>, measured on ${waqiTime}</p>`;
-			}
-			if (airnowSensorRequestSuccess) {
-				const firstAirnowData = airnowSensorData[0];
-				html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${firstAirnowData.Latitude}&amp;mlon=${firstAirnowData.Longitude}#map=9/${firstAirnowData.Latitude}/${firstAirnowData.Longitude}">${firstAirnowData.ReportingArea}, ${firstAirnowData.StateCode}</a>, measured on ${firstAirnowData.DateObserved}, ${firstAirnowData.HourObserved}:00 ${firstAirnowData.LocalTimeZone}</p>`;
-			}
-			// html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
-
-			timing.renderWeather = performance.now() - start;
+			timing.renderForecast = performance.now() - start;
 			return html_content;
 		}
 
@@ -864,10 +924,11 @@ for (i = 0; i < coll.length; i++) {
 			const encoder = new TextEncoder();
 
 			writer.write(encoder.encode(await renderHead()));
-			// build HTML content
 			writer.write(encoder.encode(await renderGeolocation()));
-			writer.write(encoder.encode(await renderWeather()));
 
+			const [html_content, waqiData, nwsPointsData, airnowSensorData] = await renderWeather();
+			writer.write(encoder.encode(html_content));
+			writer.write(encoder.encode(await renderForecast(waqiData, nwsPointsData, airnowSensorData)));
 			writer.write(encoder.encode(await renderFooter()));
 
 			// log performance
