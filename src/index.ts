@@ -882,13 +882,11 @@ export default {
 
 		async function renderFooter() {
 			const start = performance.now();
-			const clientUA = request.headers.get('User-Agent');
-			const tlsVersion = request.cf.tlsVersion;
 
 			const html_footer = `  <h1>Browser 🗔</h1>
-  <p> User Agent: ${clientUA}</p>
+  <p> User Agent: ${request.headers.get('User-Agent')}</p>
   <p> HTTP Version: ${request.cf.httpProtocol}</p>
-  <p> TLS Version: ${tlsVersion}</p>
+  <p> TLS Version: ${request.cf.tlsVersion}</p>
   <p> TLS Cipher: ${request.cf.tlsCipher}</p>
   <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>
 </div>
@@ -909,7 +907,7 @@ for (i = 0; i < coll.length; i++) {
 </script>
 </body>
 <footer>
-  <p> Page generated on ${dateFormat.format(new Date())} in ${timing.renderWeather} ms.</p>
+  <p> Page generated on ${dateFormat.format(new Date())} in ${timing.renderHead + timing.renderGeolocation + timing.renderWeather + timing.renderForecast + performance.now() - start} ms.</p>
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
@@ -924,16 +922,24 @@ for (i = 0; i < coll.length; i++) {
 			const encoder = new TextEncoder();
 
 			writer.write(encoder.encode(await renderHead()));
+    		await writer.ready;
 			writer.write(encoder.encode(await renderGeolocation()));
 
 			const [html_content, waqiData, nwsPointsData, airnowSensorData] = await renderWeather();
+    		await writer.ready;
 			writer.write(encoder.encode(html_content));
+    		await writer.ready;
 			writer.write(encoder.encode(await renderForecast(waqiData, nwsPointsData, airnowSensorData)));
+    		await writer.ready;
 			writer.write(encoder.encode(await renderFooter()));
 
+			// Call ready to ensure that all chunks are written
+    		// before closing the writer.
+    		await writer.ready;
 			// log performance
 			timing.renderTotal = performance.now() - start;
 			console.log(timing);
+
 			return writer.close();
 		}
 
