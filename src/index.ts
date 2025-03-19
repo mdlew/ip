@@ -795,7 +795,7 @@ export default {
 			}
 			if (!(nwsPointsData == undefined)) {
 				if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
-					html_content += `<p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">NWS</a>:<br /><ul>`;
+					html_content += `<p> NWS (<a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a>):<br /><ul>`;
 				}
 				// parse alert data
 				if (nwsAlertRequestSuccess) {
