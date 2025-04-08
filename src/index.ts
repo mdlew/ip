@@ -88,13 +88,13 @@ export default {
 		const fetchTimeout = 3000;
 
 		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
+		const PI = Math.PI;
+		const DEG2RAD = PI / 180;
+		const R = 6378137.0;
 		function lat2y(lat: number) {
 			return Math.log(Math.tan(PI / 4 + lat * DEG2RAD / 2)) * R
 		}
 		function lon2x(lon: number) {
-			return lon * DEG2RAD * R;
-		}
-		async function lon2x(lon: number) {
 			return lon * DEG2RAD * R;
 		}
 
@@ -674,21 +674,21 @@ export default {
 			}
 			html_content += `<p> PM<sub>2.5</sub> AQI: ${!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : 'N/A'}  ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined)}`;
 			if (!(airnowPM25.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
 			html_content += `<p> PM<sub>10</sub> AQI: ${!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined)}`;
 			if (!(airnowPM10.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
 			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.o3?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined)}`;
 			if (!(airnowO3.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${await lon2x(longitude) - 200000}&xmax=${await lon2x(longitude) + 200000}&ymin=${await lat2y(latitude) - 200000}&ymax=${await lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
