@@ -82,14 +82,17 @@ export default {
 			renderFooter: NaN,
 			renderTotal: NaN,
 		}
-		const fetchTimeout = 3000; // time to wait before assuming the server won't respond
+		// The `fetchTimeout` constant defines the maximum time (in milliseconds) to wait for a response from an API request.
+		// A value of 3000ms (3 seconds) was chosen as a balance between user experience and network latency,
+		// ensuring that the application does not hang indefinitely while waiting for a response.
+		const fetchTimeout = 3000;
 
 		// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
-		const PI = Math.PI;
-		const DEG2RAD = PI / 180;
-		const R = 6378137.0;
-		async function lat2y(lat: number) {
+		function lat2y(lat: number) {
 			return Math.log(Math.tan(PI / 4 + lat * DEG2RAD / 2)) * R
+		}
+		function lon2x(lon: number) {
+			return lon * DEG2RAD * R;
 		}
 		async function lon2x(lon: number) {
 			return lon * DEG2RAD * R;
