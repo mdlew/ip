@@ -450,6 +450,32 @@ export default {
 			}
 			return eventIcons;
 		}
+		async function userAgentIcon(userAgentStr: string) {
+			if (userAgentStr == undefined) {
+				return '';	// If undefined, return empty string
+			}
+			let userAgentIcons = '';
+			userAgentStr = userAgentStr.toLowerCase();
+			if (userAgentStr.includes('windows')) {
+				userAgentIcons += '💻🪟';  // Windows
+			}
+			if (userAgentStr.includes('macintosh')) {
+				userAgentIcons += '💻🍏';  // Mac
+			}
+			if (userAgentStr.includes('linux')) {
+				userAgentIcons += '💻🐧';  // Linux
+			}
+			if (userAgentStr.includes('android')) {
+				userAgentIcons += '📱🤖';  // Android
+			}
+			if (userAgentStr.includes('iphone')) {
+				userAgentIcons += '📱🍏';  // iPhone
+			}
+			if (userAgentStr.includes('ipad')) {
+				userAgentIcons += '📱🍏';  // iPad
+			}
+			return userAgentIcons;
+		}
 		const intFormatTwoDigit = new Intl.NumberFormat('en-US', {
 			minimumIntegerDigits: 2,
 		});
@@ -885,9 +911,10 @@ export default {
 
 		async function renderFooter() {
 			const start = performance.now();
+			const userAgentStr = request.headers.get('User-Agent');
 
-			const html_footer = `  <h1>Browser 🗔</h1>
-  <p> User Agent: ${request.headers.get('User-Agent')}</p>
+			const html_footer = `  <h1>Browser ${await userAgentIcon(userAgentStr)}</h1>
+  <p> User Agent: ${userAgentStr}</p>
   <p> HTTP Version: ${request.cf.httpProtocol}</p>
   <p> TLS Version: ${request.cf.tlsVersion}</p>
   <p> TLS Cipher: ${request.cf.tlsCipher}</p>
@@ -925,20 +952,20 @@ for (i = 0; i < coll.length; i++) {
 			const encoder = new TextEncoder();
 
 			writer.write(encoder.encode(await renderHead()));
-    		await writer.ready;
+			await writer.ready;
 			writer.write(encoder.encode(await renderGeolocation()));
 
 			const [html_content, waqiData, nwsPointsData, airnowSensorData] = await renderWeather();
-    		await writer.ready;
+			await writer.ready;
 			writer.write(encoder.encode(html_content));
-    		await writer.ready;
+			await writer.ready;
 			writer.write(encoder.encode(await renderForecast(waqiData, nwsPointsData, airnowSensorData)));
-    		await writer.ready;
+			await writer.ready;
 			writer.write(encoder.encode(await renderFooter()));
 
 			// Call ready to ensure that all chunks are written
-    		// before closing the writer.
-    		await writer.ready;
+			// before closing the writer.
+			await writer.ready;
 			// log performance
 			timing.renderTotal = performance.now() - start;
 			console.log(timing);
