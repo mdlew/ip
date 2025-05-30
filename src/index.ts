@@ -883,7 +883,7 @@ export default {
 							}
 							newDate = false;
 						} else {
-							html_content += `, `;
+							html_content += `<br />`;
 						}
 						html_content += `${currAirnowData.ParameterName}: ${currAirnowData.Category.Name} ${await aqiCategoryToEmoji(
 							currAirnowData.Category.Number

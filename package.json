@@ -3,7 +3,6 @@
 	"version": "0.1.0",
 	"description": "IP Geolocation",
 	"main": "src/index.js",
-	"packageManager": "pnpm@10.10.0",
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
