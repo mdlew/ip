@@ -8,7 +8,7 @@
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"test": "vitest",
-		"cf-typegen": "wrangler types"
+		"generate-types": "wrangler types"
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "^0.4.0"

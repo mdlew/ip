@@ -25,6 +25,9 @@ jobs:
               args: [--force, --fix-lockfile, --no-frozen-lockfile]
             - args: [--global, gulp, prettier, typescript]
         
+      - name: Generate types
+        run: pnpm run generate-types
+        
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
