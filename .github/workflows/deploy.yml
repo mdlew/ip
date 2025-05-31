@@ -22,7 +22,7 @@ jobs:
           version: latest #10
           run_install: |
             - recursive: true
-              args: [--no-lockfile]
+              args: [--force, --fix-lockfile, --no-frozen-lockfile]
             - args: [--global, gulp, prettier, typescript]
         
       - name: Deploy
@@ -38,3 +38,9 @@ jobs:
           WAQI_TOKEN: ${{ secrets.WAQI_TOKEN }}
           NWS_AGENT: ${{ secrets.NWS_AGENT }}
           AIRNOW_KEY: ${{ secrets.AIRNOW_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-lock
+          path: |
+            ~/**/pnpm-lock.yaml
