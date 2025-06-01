@@ -691,37 +691,37 @@ export default {
 			html_content += `<p> Wind speed: ${floatFormat.format(windSpeed)} mph</p>`;
 
 			// air quality data
-			html_content += `<p> Overall AQI: ${!(waqiData == undefined) ? waqiData.aqi : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.aqi : undefined)}`;
+			html_content += `<p> Overall: ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.aqi : undefined)} ${!(waqiData == undefined) ? (waqiData.aqi + ' AQI') : 'N/A'} `;
 			if (!(airnowOverall.AQI == undefined)) {
-				html_content += ` (AirNow AQI: ${airnowOverall.AQI}, ${await aqiToEmoji(airnowOverall.AQI)} ${airnowOverall.category})</p>`;
+				html_content += ` (AirNow: ${await aqiToEmoji(airnowOverall.AQI)} ${airnowOverall.AQI} AQI, ${airnowOverall.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> PM<sub>2.5</sub> AQI: ${!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : 'N/A'}  ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined)}`;
+			html_content += `<p> PM<sub>2.5</sub>: ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.pm25?.v + ' AQI') : 'N/A'} `;
 			if (!(airnowPM25.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow AQI</a>: ${airnowPM25.AQI}, ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow</a>: ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.AQI} AQI, ${airnowPM25.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> PM<sub>10</sub> AQI: ${!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined)}`;
+			html_content += `<p> PM<sub>10</sub>: ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.pm10?.v + ' AQI') : 'N/A'} `;
 			if (!(airnowPM10.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow AQI</a>: ${airnowPM10.AQI}, ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow</a>: ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.AQI} AQI, ${airnowPM10.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> O<sub>3</sub> (ozone) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.o3?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined)}`;
+			html_content += `<p> O<sub>3</sub> (ozone): ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.o3?.v + ' AQI') : 'N/A'} `;
 			if (!(airnowO3.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow AQI</a>: ${airnowO3.AQI}, ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow</a>: ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.AQI} AQI, ${airnowO3.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
-			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.no2?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.no2?.v : undefined)}</p>`;
-			html_content += `<p> SO<sub>2</sub> (sulphur dioxide) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.so2?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.so2?.v : undefined)}</p>`;
-			html_content += `<p> CO (carbon monoxide) AQI: ${!(waqiData == undefined) ? waqiData.iaqi.co?.v : 'N/A'} ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.co?.v : undefined)}</p>`;
+			html_content += `<p> NO<sub>2</sub> (nitrogen dioxide): ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.no2?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.no2?.v + ' AQI') : 'N/A'}</p>`;
+			html_content += `<p> SO<sub>2</sub> (sulphur dioxide): ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.so2?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.so2?.v + ' AQI') : 'N/A'}</p>`;
+			html_content += `<p> CO (carbon monoxide): ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.co?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.co?.v + ' AQI') : 'N/A'}</p>`;
 
 			// add NWS radar loop if available
 			if (!(nwsPointsData == undefined)) {
@@ -885,12 +885,11 @@ export default {
 						} else {
 							html_content += `<br />`;
 						}
-						html_content += `${currAirnowData.ParameterName}: ${currAirnowData.Category.Name} ${await aqiCategoryToEmoji(
-							currAirnowData.Category.Number
-						)}`;
+						html_content += `${currAirnowData.ParameterName}: ${await aqiCategoryToEmoji(currAirnowData.Category.Number)}`;
 						if (currAirnowData?.AQI > 0) {
-							html_content += ` (AQI ${currAirnowData.AQI})`;
+							html_content += ` ${currAirnowData.AQI} AQI,`;
 						}
+						html_content += ` ${currAirnowData.Category.Name}`;
 					}
 				}
 				html_content += `</li>`;
