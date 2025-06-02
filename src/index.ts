@@ -26,7 +26,7 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const start = performance.now();
-		const timezone = request.cf.timezone;
+		const timezone = request.cf?.timezone;
 		const dateFormat = new Intl.DateTimeFormat('en-US', {
 			year: "numeric",
 			month: "2-digit",
@@ -46,8 +46,8 @@ export default {
 		const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
 		// pull location data, use to generate API requests
-		const latitude = request.cf.latitude;
-		const longitude = request.cf.longitude;
+		const latitude = request.cf?.latitude;
+		const longitude = request.cf?.longitude;
 		// WAQI API setup https://aqicn.org/api/
 		const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
 		const waqiRequestInit = {
@@ -560,17 +560,17 @@ export default {
 		async function renderGeolocation() {
 			const start = performance.now();
 			const clientIP = request.headers.get('CF-Connecting-IP');
-			const clientASN = request.cf.asn;
-			const clientISP = request.cf.asOrganization;
+			const clientASN = request.cf?.asn;
+			const clientISP = request.cf?.asOrganization;
 
 			const html_content = `  <h1>IP Geolocation 🌐</h1>
   <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare radar</a>)</p>
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${timezone}</p>
-  <p> City: ${request.cf.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf.metroCode}</p>
-  <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf.region}, RegionCode: ${request.cf.regionCode}, PostalCode: ${request.cf.postalCode}</p>
-  <p> Country: ${request.cf.country},  Continent: ${request.cf.continent}</p>`;
+  <p> City: ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf?.metroCode}</p>
+  <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf?.region}, RegionCode: ${request.cf?.regionCode}, PostalCode: ${request.cf?.postalCode}</p>
+  <p> Country: ${request.cf?.country},  Continent: ${request.cf?.continent}</p>`;
 
 			timing.renderGeolocation = performance.now() - start;
 			return html_content;
@@ -914,10 +914,10 @@ export default {
 
 			const html_footer = `  <h1>Browser ${await userAgentIcon(userAgentStr)}</h1>
   <p> User Agent: ${userAgentStr}</p>
-  <p> HTTP Version: ${request.cf.httpProtocol}</p>
-  <p> TLS Version: ${request.cf.tlsVersion}</p>
-  <p> TLS Cipher: ${request.cf.tlsCipher}</p>
-  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf.colo}</p>
+  <p> HTTP Version: ${request.cf?.httpProtocol}</p>
+  <p> TLS Version: ${request.cf?.tlsVersion}</p>
+  <p> TLS Cipher: ${request.cf?.tlsCipher}</p>
+  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf?.colo}</p>
 </div>
 <script> /* Script borrowed from https://www.w3schools.com/howto/howto_js_collapsible.asp */
 var coll = document.getElementsByClassName("collapsible");
@@ -1059,8 +1059,8 @@ for (i = 0; i < coll.length; i++) {
 				'Cross-Origin-Resource-Policy': 'same-site',
 			});
 
-			if (!(request.cf.tlsVersion.toUpperCase().includes('TLSV1.2') || request.cf.tlsVersion.toUpperCase().includes('TLSV1.3'))) {
-				console.log({ error: `TLS version error: "${request.cf.tlsVersion}"` });
+			if (!(request.cf?.tlsVersion.toUpperCase().includes('TLSV1.2') || request.cf?.tlsVersion.toUpperCase().includes('TLSV1.3'))) {
+				console.log({ error: `TLS version error: "${request.cf?.tlsVersion}"` });
 				return new Response('Please use TLS version 1.2 or higher.', {
 					status: 403,
 					statusText: 'Forbidden',

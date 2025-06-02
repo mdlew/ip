@@ -15,6 +15,7 @@
 		"moduleResolution": "Bundler",
 		/* Specify type package names to be included without being referenced in a source file. */
 		"types": ["./worker-configuration.d.ts"], /*["@cloudflare/workers-types"],*/
+		"typeRoots": ["./node_modules/@types", "./types"], 
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
 
@@ -40,5 +41,5 @@
 		"skipLibCheck": true
 	},
 	"exclude": ["test"],
-	"include": ["worker-configuration.d.ts", "src/**/*.ts"]
+	"include": ["worker-configuration.d.ts", "static-content-manifest.d.ts", "src/**/*.ts"]
 }
