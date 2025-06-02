@@ -27,6 +27,9 @@ jobs:
         
       - name: Generate types
         run: pnpm run generate-types
+
+      - name: Build
+        run: pnpm run build
         
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
