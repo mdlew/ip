@@ -14,8 +14,7 @@
 		/* Specify how TypeScript looks up a file from a given module specifier. */
 		"moduleResolution": "Bundler",
 		/* Specify type package names to be included without being referenced in a source file. */
-		"types": ["./worker-configuration.d.ts"], /*["@cloudflare/workers-types"],*/
-		"typeRoots": ["./node_modules/@types", "./types"], 
+		"types": ["./worker-configuration.d.ts", "./static-content-manifest.d.ts"], /*["@cloudflare/workers-types"],*/
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
 
