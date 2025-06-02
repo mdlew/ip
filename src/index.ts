@@ -26,7 +26,7 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const start = performance.now();
-		const timezone = request.cf?.timezone;
+		const timezone = typeof request.cf?.timezone === "string" ? request.cf.timezone : undefined;
 		const dateFormat = new Intl.DateTimeFormat('en-US', {
 			year: "numeric",
 			month: "2-digit",
@@ -895,10 +895,11 @@ export default {
 				html_content += `</li>`;
 				// add discussion if available
 				if (!(firstAirnowForecast?.Discussion == undefined) && !(firstAirnowForecast?.Discussion === '')) {
-					if (URL.canParse(firstAirnowForecast.Discussion)) {
+					if (typeof firstAirnowForecast.Discussion === "string" && URL.canParse(firstAirnowForecast.Discussion)) {
 						html_content += `<li><a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></li>`;
 					} else {
-						html_content += `<li><button class="collapsible">Discussion</button><div class="content"><p>${firstAirnowForecast.Discussion}</p></div></li>`;
+						html_content += `<li><button class="collapsible">Discussion</button><div class="content"><p>${typeof firstAirnowForecast.Discussion === "string" ? firstAirnowForecast.Discussion : ""
+							}</p></div></li>`;
 					}
 				}
 				html_content += `</ul></p>`;
