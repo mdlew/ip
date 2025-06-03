@@ -566,7 +566,11 @@ export default {
 			const html_content = `  <h1>IP Geolocation 🌐</h1>
   <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare radar</a>)</p>
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
-  <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(longitude) - 0.35)}%2C${(parseFloat(latitude) - 0.35)}%2C${(parseFloat(longitude) + 0.35)}%2C${(parseFloat(latitude) + 0.35)}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
+  <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${(typeof longitude === "string" || typeof longitude === "number" ? parseFloat(longitude as string) : 0) - 0.35
+				}%2C${(typeof latitude === "string" || typeof latitude === "number" ? parseFloat(latitude as string) : 0) - 0.35
+				}%2C${(typeof longitude === "string" || typeof longitude === "number" ? parseFloat(longitude as string) : 0) + 0.35
+				}%2C${(typeof latitude === "string" || typeof latitude === "number" ? parseFloat(latitude as string) : 0) + 0.35
+				}&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${timezone}</p>
   <p> City: ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf?.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf?.region}, RegionCode: ${request.cf?.regionCode}, PostalCode: ${request.cf?.postalCode}</p>
@@ -700,21 +704,33 @@ export default {
 			}
 			html_content += `<p> PM<sub>2.5</sub>: ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.pm25?.v + ' AQI') : 'N/A'} `;
 			if (!(airnowPM25.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm25&contours=pm25">AirNow</a>: ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.AQI} AQI, ${airnowPM25.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) - 200000
+					}&xmax=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) + 200000
+					}&ymin=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) - 200000
+					}&ymax=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) + 200000
+					}&monitors=pm25&contours=pm25">AirNow</a>: ${await aqiToEmoji(airnowPM25.AQI)} ${airnowPM25.AQI} AQI, ${airnowPM25.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
 			html_content += `<p> PM<sub>10</sub>: ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.pm10?.v + ' AQI') : 'N/A'} `;
 			if (!(airnowPM10.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&monitors=pm10&contours=ozonepm">AirNow</a>: ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.AQI} AQI, ${airnowPM10.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) - 200000
+					}&xmax=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) + 200000
+					}&ymin=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) - 200000
+					}&ymax=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) + 200000
+					}&monitors=pm10&contours=ozonepm">AirNow</a>: ${await aqiToEmoji(airnowPM10.AQI)} ${airnowPM10.AQI} AQI, ${airnowPM10.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
 			}
 			html_content += `<p> O<sub>3</sub> (ozone): ${await aqiToEmoji(!(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined)} ${!(waqiData == undefined) ? (waqiData.iaqi.o3?.v + ' AQI') : 'N/A'} `;
 			if (!(airnowO3.AQI == undefined)) {
-				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${lon2x(longitude) - 200000}&xmax=${lon2x(longitude) + 200000}&ymin=${lat2y(latitude) - 200000}&ymax=${lat2y(latitude) + 200000}&contours=ozonepm&monitors=ozone">AirNow</a>: ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.AQI} AQI, ${airnowO3.category})</p>`;
+				html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) - 200000
+					}&xmax=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) + 200000
+					}&ymin=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) - 200000
+					}&ymax=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) + 200000
+					}&contours=ozonepm&monitors=ozone">AirNow</a>: ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.AQI} AQI, ${airnowO3.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
@@ -788,8 +804,11 @@ export default {
 			const nwsAlertRequestSuccess =
 				!(nwsAlertData == undefined) &&
 				nwsAlertData.status === 'fulfilled' &&
-				Array.isArray(nwsAlertData.value?.features) &&
-				nwsAlertData.value.features.length > 0;
+				nwsAlertData.value !== undefined &&
+				typeof nwsAlertData.value === 'object' &&
+				nwsAlertData.value !== null &&
+				Array.isArray((nwsAlertData.value as any).features) &&
+				(nwsAlertData.value as any).features.length > 0;
 			const nwsForecastRequestSuccess =
 				!(nwsForecastData == undefined) &&
 				nwsForecastData.status === 'fulfilled' &&
@@ -804,7 +823,8 @@ export default {
 				airnowForecastData.value.length > 0;
 			// parse responses if successful
 			if (nwsAlertRequestSuccess) {
-				nwsAlertData = (nwsAlertData as PromiseFulfilledResult<any>).value.features;
+				const value = (nwsAlertData as PromiseFulfilledResult<any>).value;
+				nwsAlertData = (value as { features: any[] }).features;
 			} else {
 				nwsAlertData = undefined;
 			}
