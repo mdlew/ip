@@ -730,7 +730,7 @@ export default {
 					}&xmax=${(typeof longitude === "string" || typeof longitude === "number" ? lon2x(parseFloat(longitude as string)) : 0) + 200000
 					}&ymin=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) - 200000
 					}&ymax=${(typeof latitude === "string" || typeof latitude === "number" ? lat2y(parseFloat(latitude as string)) : 0) + 200000
-					}&contours=ozonepm&monitors=ozone">AirNow</a>: ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.AQI} AQI, ${airnowO3.category})</p>`;
+					}&contours=ozone&monitors=ozone">AirNow</a>: ${await aqiToEmoji(airnowO3.AQI)} ${airnowO3.AQI} AQI, ${airnowO3.category})</p>`;
 			}
 			else {
 				html_content += `</p>`;
