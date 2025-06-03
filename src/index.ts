@@ -601,21 +601,21 @@ export default {
 				console.log({ error: e, error_stack: (e as Error).stack });
 			}
 			const waqiRequestSuccess = !(waqiData == undefined) && waqiData.status === 'fulfilled' && !(waqiData.value == undefined);
-			const nwsPointsRequestSuccess = !(nwsPointsData == undefined) && nwsPointsData.status === 'fulfilled' && !(nwsPointsData.value == undefined) && 'properties' in nwsPointsData.value
+			const nwsPointsRequestSuccess = !(nwsPointsData == undefined) && nwsPointsData.status === 'fulfilled' && !(nwsPointsData.value == undefined) && typeof nwsPointsData.value === 'object' && nwsPointsData.value !== null && 'properties' in nwsPointsData.value;
 			const airnowSensorRequestSuccess = !(airnowSensorData == undefined) && airnowSensorData.status === 'fulfilled' && Array.isArray(airnowSensorData.value) && airnowSensorData.value.length > 0;
 			// parse responses if successful
 			if (waqiRequestSuccess) {
-				waqiData = waqiData?.value.data;
+				waqiData = (waqiData as PromiseFulfilledResult<any>).value.data;
 			} else {
 				waqiData = undefined;
 			}
 			if (nwsPointsRequestSuccess) {
-				nwsPointsData = nwsPointsData?.value.properties;
+				nwsPointsData = (nwsPointsData as PromiseFulfilledResult<any>).value.properties;
 			} else {
 				nwsPointsData = undefined;
 			}
 			if (airnowSensorRequestSuccess) {
-				airnowSensorData = airnowSensorData?.value;
+				airnowSensorData = (airnowSensorData as PromiseFulfilledResult<any>).value;
 			} else {
 				airnowSensorData = undefined;
 			}
@@ -850,7 +850,7 @@ export default {
 					html_content += `<p> NWS (<a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a>):<br /><ul>`;
 				}
 				// parse alert data
-				if (nwsAlertRequestSuccess) {
+				if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
 					html_content += `<li>Alerts ⚠️`;
 					for (let i = 0; i < nwsAlertData.length; i++) {
 						let alertInfo = nwsAlertData[i].properties;
@@ -936,7 +936,7 @@ export default {
 			const start = performance.now();
 			const userAgentStr = request.headers.get('User-Agent');
 
-			const html_footer = `  <h1>Browser ${await userAgentIcon(userAgentStr)}</h1>
+			const html_footer = `  <h1>Browser ${await userAgentIcon(userAgentStr ?? "")}</h1>
   <p> User Agent: ${userAgentStr}</p>
   <p> HTTP Version: ${request.cf?.httpProtocol}</p>
   <p> TLS Version: ${request.cf?.tlsVersion}</p>
