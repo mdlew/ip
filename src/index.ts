@@ -587,8 +587,8 @@ export default {
 			try {
 				[waqiData, nwsPointsData, airnowSensorData] = await Promise.allSettled([
 					fetchProducts(waqiApiRequestUrl, waqiRequestInit, true),
-					fetchProducts(nwsPointsRequestUrl, nwsRequestInit, request.cf?.country.toUpperCase().includes('US')),
-					fetchProducts(airnowSensorRequestUrl, airnowRequestInit, request.cf?.country.toUpperCase().includes('US')),
+					fetchProducts(nwsPointsRequestUrl, nwsRequestInit, typeof request.cf?.country === "string" && request.cf?.country.toUpperCase().includes('US')),
+					fetchProducts(airnowSensorRequestUrl, airnowRequestInit, typeof request.cf?.country === "string" && request.cf?.country.toUpperCase().includes('US')),
 				]);
 			}
 			catch (e) {
@@ -793,7 +793,9 @@ export default {
 			const nwsForecastRequestSuccess =
 				!(nwsForecastData == undefined) &&
 				nwsForecastData.status === 'fulfilled' &&
-				!(nwsForecastData.value == undefined) &&
+				nwsForecastData.value !== undefined &&
+				typeof nwsForecastData.value === 'object' &&
+				nwsForecastData.value !== null &&
 				'properties' in nwsForecastData.value;
 			const airnowForecastRequestSuccess =
 				!(airnowForecastData == undefined) &&
@@ -802,17 +804,18 @@ export default {
 				airnowForecastData.value.length > 0;
 			// parse responses if successful
 			if (nwsAlertRequestSuccess) {
-				nwsAlertData = nwsAlertData?.value.features;
+				nwsAlertData = (nwsAlertData as PromiseFulfilledResult<any>).value.features;
 			} else {
 				nwsAlertData = undefined;
 			}
 			if (nwsForecastRequestSuccess) {
-				nwsForecastData = nwsForecastData?.value.properties;
+				// TypeScript now knows nwsForecastData is fulfilled
+				nwsForecastData = (nwsForecastData as PromiseFulfilledResult<any>).value.properties;
 			} else {
 				nwsForecastData = undefined;
 			}
 			if (airnowForecastRequestSuccess) {
-				airnowForecastData = airnowForecastData?.value;
+				airnowForecastData = (airnowForecastData as PromiseFulfilledResult<any>).value;
 			} else {
 				airnowForecastData = undefined;
 			}
@@ -1060,7 +1063,13 @@ for (i = 0; i < coll.length; i++) {
 				'Cross-Origin-Resource-Policy': 'same-site',
 			});
 
-			if (!(request.cf?.tlsVersion.toUpperCase().includes('TLSV1.2') || request.cf?.tlsVersion.toUpperCase().includes('TLSV1.3'))) {
+			if (
+				typeof request.cf?.tlsVersion !== "string" ||
+				!(
+					request.cf.tlsVersion.toUpperCase().includes('TLSV1.2') ||
+					request.cf.tlsVersion.toUpperCase().includes('TLSV1.3')
+				)
+			) {
 				console.log({ error: `TLS version error: "${request.cf?.tlsVersion}"` });
 				return new Response('Please use TLS version 1.2 or higher.', {
 					status: 403,
