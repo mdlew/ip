@@ -943,6 +943,11 @@ export default {
   <p> TLS Cipher: ${request.cf?.tlsCipher}</p>
   <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${request.cf?.colo}</p>
 </div>
+<footer>
+  <p> Page generated on ${dateFormat.format(new Date())} in ${timing.renderHead + timing.renderGeolocation + timing.renderWeather + timing.renderForecast + performance.now() - start} ms.</p>
+  <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
+  <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
+</footer>
 <script> /* Script borrowed from https://www.w3schools.com/howto/howto_js_collapsible.asp */
 var coll = document.getElementsByClassName("collapsible");
 var i;
@@ -959,11 +964,6 @@ for (i = 0; i < coll.length; i++) {
 }
 </script>
 </body>
-<footer>
-  <p> Page generated on ${dateFormat.format(new Date())} in ${timing.renderHead + timing.renderGeolocation + timing.renderWeather + timing.renderForecast + performance.now() - start} ms.</p>
-  <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
-  <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
-</footer>
 </html>`;
 
 			timing.renderFooter = performance.now() - start;
