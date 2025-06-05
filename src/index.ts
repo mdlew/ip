@@ -847,7 +847,7 @@ export default {
 			}
 			if (!(nwsPointsData == undefined)) {
 				if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
-					html_content += `<p> NWS (<a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a>):<br /><ul>`;
+					html_content += `<p> NWS (<a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a>):</p><ul>`;
 				}
 				// parse alert data
 				if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
@@ -878,12 +878,12 @@ export default {
 						)} ${nwsForecastData.periods[i].detailedForecast}</li>`;
 					}
 				}
-				html_content += `</ul></p>`;
+				html_content += `</ul>`;
 			}
 
 			if (airnowForecastRequestSuccess) {
 				const firstAirnowForecast = airnowForecastData[0];
-				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a>:<br /><ul>`;
+				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a>:</p><ul>`;
 				let airnowDateIdx = 0;
 				let newDate = true;
 				for (let i = 0; i < airnowForecastData.length; i++) {
@@ -893,9 +893,11 @@ export default {
 						airnowDateIdx < airnowDateStr.length - 1 &&
 						currAirnowData.DateForecast === airnowDateStr[airnowDateIdx + 1]
 					) {
-						html_content += `</li>`;
 						newDate = true;
 						airnowDateIdx++;
+						if (i > 0) {
+							html_content += `</li>`;
+						}
 					}
 					// if date matches, then push data to HTML
 					if (currAirnowData?.DateForecast === airnowDateStr[airnowDateIdx]) {
@@ -925,7 +927,7 @@ export default {
 							}</p></div></li>`;
 					}
 				}
-				html_content += `</ul></p>`;
+				html_content += `</ul>`;
 			}
 
 			timing.renderForecast = performance.now() - start;
