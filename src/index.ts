@@ -546,6 +546,7 @@ export default {
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
 	<link rel="apple-touch-icon" href="/favicon.ico">
 	<link rel="preconnect" href="https://www.openstreetmap.org" />
+	<link rel="preconnect" href="https://tile.openstreetmap.org" />
 	<link rel="preconnect" href="https://radar.weather.gov" />
 	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 	<style> ${html_style} </style>
@@ -1083,7 +1084,7 @@ for (i = 0; i < coll.length; i++) {
 				'Cross-Origin-Embedder-Policy': 'require-corp; report-to="default";',
 				'Cross-Origin-Opener-Policy': 'same-site; report-to="default";',
 				'Cross-Origin-Resource-Policy': 'same-site',
-				link: "<https://www.openstreetmap.org>; rel=preconnect, <https://www.openstreetmap.org>; rel=preconnect; crossorigin, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
+				link: "<https://www.openstreetmap.org>; rel=preconnect, <https://www.openstreetmap.org>; rel=preconnect; crossorigin, <https://tile.openstreetmap.org>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
 			});
 
 			if (
