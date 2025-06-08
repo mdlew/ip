@@ -403,6 +403,25 @@ export default {
 			}
 			let eventIcons = '';
 			event = event.toUpperCase();
+			if (event.includes('DUST')) {
+				eventIcons += '🌫️💨';  // Dust
+			}
+			if (event.includes('SMOKE')) {
+				eventIcons += '🔥🌫️';  // Smoke
+			}
+			if (event.includes('FIRE'))	{
+				eventIcons += '🔥';  // Fire
+			}
+
+			if (event.includes('FREEZE')) {
+				eventIcons += '🥶';  // Freeze
+			}
+			if (event.includes('FREEZING')) {
+				eventIcons += '🥶';  // Freezing
+			}
+			if (event.includes('FROST')) {
+				eventIcons += '❄️🥶';  // Frost
+			}
 			if (event.includes('WINTER')) {
 				eventIcons += '❄️🧊🌨️';  // Winter
 			}
@@ -412,9 +431,13 @@ export default {
 			if (event.includes('ICE')) {
 				eventIcons += '🧊🌧️';  // Ice
 			}
+			if (event.includes('SNOW')) {
+				eventIcons += '❄️';  // Snow
+			}
 			if (event.includes('COLD')) {
 				eventIcons += '🥶';  // Freeze
 			}
+
 			if (event.includes('FOG')) {
 				eventIcons += '🌫️';  // Fog
 			}
@@ -427,18 +450,37 @@ export default {
 			if (event.includes('WIND')) {
 				eventIcons += '🌬️';  // Wind
 			}
+			if (event.includes('GALE')) {
+				eventIcons += '🌬️';  // Gale
+			}
+
 			if (event.includes('FLOOD')) {
 				eventIcons += '🌊';  // Flood
 			}
+			if (event.includes('SQUALL')) {
+				eventIcons += '🌬️🌊';  // Squall
+			}
+			if (event.includes('STORM SURGE')) {
+				eventIcons += '🌊🚨';  // Storm Surge
+			}
+
 			if (event.includes('HEAT')) {
 				eventIcons += '🥵';  // Heat
 			}
+
 			if (event.includes('TROPICAL')) {
 				eventIcons += '🌀';  // Tropical
 			}
 			if (event.includes('HURRICANE')) {
 				eventIcons += '🌀';  // Hurricane
 			}
+			if (event.includes('TYPHOON')) {
+				eventIcons += '🌀';  // Typhoon
+			}
+			if (event.includes('TSUNAMI')) {
+				eventIcons += '🌊🚨';  // Tsunami
+			}
+
 			if (event.includes('ADVISORY')) {
 				eventIcons += '⚠️';  // Advisory
 			}
@@ -447,6 +489,9 @@ export default {
 			}
 			if (event.includes('WARNING')) {
 				eventIcons += '🚨';  // Warning
+			}
+			if (event.includes('EVACUATION')) {
+				eventIcons += '🚨🚗🛣️';  // Evacuation
 			}
 			return eventIcons;
 		}
