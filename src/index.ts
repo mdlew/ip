@@ -897,15 +897,15 @@ export default {
 				}
 				// parse alert data
 				if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
-					html_content += `<li>Alerts ⚠️`;
+					html_content += `<li><h3>Alerts ⚠️</h3>`;
 					for (let i = 0; i < nwsAlertData.length; i++) {
 						let alertInfo = nwsAlertData[i].properties;
-						html_content += `<br /><button class="collapsible"> ${alertInfo?.response} ${await nwsAlertResponseToEmoji(
+						html_content += `<br /><button class="collapsible"> ${await nwsAlertResponseToEmoji(
 							alertInfo?.response
-						)}, ${alertInfo?.severity} ${await nwsAlertSeverityToEmoji(alertInfo?.severity)}: ${alertInfo?.headline
-							}</button><div class="content"><h3>${alertInfo?.event} ${await nwsAlertEventToEmoji(
+						)} ${alertInfo?.response}, ${await nwsAlertSeverityToEmoji(alertInfo?.severity)} ${alertInfo?.severity}: ${alertInfo?.headline
+							}</button><div class="content"><h3> ${await nwsAlertEventToEmoji(
 								alertInfo?.event
-							)}</h3><p>${alertInfo?.description}</p><p>Instruction: ${alertInfo?.instruction
+							)} ${alertInfo?.event}</h3><p>${alertInfo?.description}</p><p>Instruction: ${alertInfo?.instruction
 							}</p><p>Status: ${alertInfo?.status}, Urgency: ${alertInfo?.urgency}, Certainty: ${alertInfo?.certainty
 							}</p><p>Onset: ${dateFormat.format(new Date(alertInfo?.onset))}, Ends: ${dateFormat.format(
 								new Date(alertInfo?.ends)
@@ -929,7 +929,7 @@ export default {
 
 			if (airnowForecastRequestSuccess) {
 				const firstAirnowForecast = airnowForecastData[0];
-				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a>:</p><ul>`;
+				html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a> (<a href="https://www.airnow.gov/?city=${encodeURIComponent(firstAirnowForecast.ReportingArea)}&state=${firstAirnowForecast.StateCode}&country=USA">current conditions</a>):</p><ul>`;
 				let airnowDateIdx = 0;
 				let newDate = true;
 				for (let i = 0; i < airnowForecastData.length; i++) {
