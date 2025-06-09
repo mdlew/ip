@@ -409,7 +409,7 @@ export default {
 			if (event.includes('SMOKE')) {
 				eventIcons += '🔥🌫️';  // Smoke
 			}
-			if (event.includes('FIRE'))	{
+			if (event.includes('FIRE')) {
 				eventIcons += '🔥';  // Fire
 			}
 
@@ -1110,11 +1110,6 @@ for (i = 0; i < coll.length; i++) {
 			  Permissions-Policy header provides the ability to allow or deny the use of browser features, such as opting out of FLoC - which you can use below:
 			  'Permissions-Policy': 'interest-cohort=()',
 			  */
-				/*
-			  X-XSS-Protection header prevents a page from loading if an XSS attack is detected.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
-			  */
-				'X-XSS-Protection': '0',
 				/*
 			  X-Frame-Options header prevents click-jacking attacks.
 			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
