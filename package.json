@@ -12,12 +12,12 @@
 		"generate-types": "wrangler types"
 	},
 	"dependencies": {
-		"typescript": "^5.6.3",
+		"typescript": "latest",
 		"wrangler": "latest"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250607.0",
-		"@cloudflare/vitest-pool-workers": "^0.8.36",
-		"vitest": "^3.1.2"
+		"@cloudflare/workers-types": "latest",
+		"@cloudflare/vitest-pool-workers": "latest",
+		"vitest": "latest"
 	}
 }
