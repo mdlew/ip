@@ -12,13 +12,12 @@
 		"generate-types": "wrangler types"
 	},
 	"dependencies": {
-		"@cloudflare/kv-asset-handler": "^0.4.0"
+		"typescript": "^5.6.3",
+		"wrangler": "latest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250607.0",
 		"@cloudflare/vitest-pool-workers": "^0.8.36",
-		"typescript": "^5.6.3",
-		"vitest": "^3.1.2",
-		"wrangler": "latest"
+		"vitest": "^3.1.2"
 	}
 }

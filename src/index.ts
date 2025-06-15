@@ -12,19 +12,12 @@
  */
 
 /* @cloudflare/workers-types package names are included in tsconfig.json */
-import {
-  getAssetFromKV,
-  NotFoundError,
-  MethodNotAllowedError,
-} from "@cloudflare/kv-asset-handler";
-// URL is available in the global scope of Cloudflare Workers
-import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 
 export interface Env {
   WAQI_TOKEN: string;
   NWS_AGENT: string;
   AIRNOW_KEY: string;
-  __STATIC_CONTENT: KVNamespace;
+  ASSETS: Fetcher; // Add ASSETS property to the Env interface
 }
 
 export default {
@@ -53,7 +46,6 @@ export default {
       new Date().toLocaleString("en-US", { timeZone: timezone })
     );
 
-    const assetManifest = JSON.parse(manifestJSON);
     const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
     // pull location data, use to generate API requests
@@ -1296,18 +1288,7 @@ for (i = 0; i < coll.length; i++) {
         return MethodNotAllowed(request);
       }
       try {
-        return await getAssetFromKV(
-          {
-            request,
-            waitUntil(promise: Promise<any>) {
-              return ctx.waitUntil(promise);
-            },
-          },
-          {
-            ASSET_NAMESPACE: env.__STATIC_CONTENT,
-            ASSET_MANIFEST: assetManifest,
-          }
-        );
+        return env.ASSETS.fetch(request);
       } catch (e) {
         const pathname = url.pathname;
         console.log({

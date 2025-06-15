@@ -2,10 +2,17 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "ip"
 main = "src/index.ts"
-compatibility_date = "2025-05-31"
+compatibility_date = "2025-06-15"
 
-[site]
-bucket = "./public"
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = false
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
+
+# [site]
+# bucket = "./public"
 
 # Workers Logs
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
