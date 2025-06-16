@@ -402,6 +402,9 @@ export default {
       if (event.includes("FIRE")) {
         eventIcons += "🔥"; // Fire
       }
+      if (event.includes("AIR QUALITY")) {
+        eventIcons += "🌫️😷"; // Air Quality
+      }
 
       if (event.includes("FREEZE")) {
         eventIcons += "🥶"; // Freeze
