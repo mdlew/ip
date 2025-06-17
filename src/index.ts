@@ -1147,7 +1147,7 @@ export default {
             if (newDate) {
               html_content += `<li>${dayStr[airnowDateIdx]}: `;
               if (currAirnowData?.ActionDay) {
-                html_content += `Action day ⚠️<br />`;
+                html_content += `<h3>⚠️ Action day</h3><br />`;
               }
               newDate = false;
             } else {
