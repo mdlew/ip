@@ -642,7 +642,7 @@ export default {
 
     // MapLibre GL JS does not handle RTL text by default,
     // so we recommend adding this dependency to fully support RTL rendering if your style includes RTL text
-    maplibregl.setRTLTextPlugin('https://unpkg.com/@mapbox/mapbox-gl-rtl-text@latest/mapbox-gl-rtl-text.min.js');
+    maplibregl.setRTLTextPlugin('https://unpkg.com/@mapbox/mapbox-gl-rtl-text@latest/dist/mapbox-gl-rtl-text.js');
 
     // Add zoom and rotation controls to the map.
     map.addControl(new maplibregl.NavigationControl());
