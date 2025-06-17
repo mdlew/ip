@@ -592,21 +592,23 @@ export default {
  .collapsible {  background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none; }
  .active, .collapsible:hover {  background-color: #59230B;}
  .collapsible:after {  content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {  content: '➖';}
- .content {  padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}`;
+ .content {  padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
+ #map { width: 90%; height: 350px; marginwidth: 0; marginheight: 0; }`;
       const html_head = `<!DOCTYPE html>
 <html lang="en">
 <head>
 	<title>IP Geolocation 🌐 + Weather 🌦</title>
 	<meta charset="utf-8">
 	<meta name="description" content="IP Geolocation and Weather information">
-	<meta name="viewport" content="width=device-width" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
 	<link rel="apple-touch-icon" href="/favicon.ico">
-	<link rel="preconnect" href="https://www.openstreetmap.org" />
-	<link rel="preconnect" href="https://tile.openstreetmap.org" />
+	<link rel="preconnect" href="https://unpkg.com" />
 	<link rel="preconnect" href="https://radar.weather.gov" />
-	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-	<style> ${html_style} </style>
+	<script type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+  <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+	<style type="text/css"> ${html_style} </style>
 </head>
 <body>
 <div id="container">`;
@@ -624,23 +626,7 @@ export default {
       const html_content = `  <h1>IP Geolocation 🌐</h1>
   <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare radar</a>)</p>
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
-  <iframe loading="lazy" title="OpenStreetMap widget" width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=${
-    (typeof longitude === "string" || typeof longitude === "number"
-      ? parseFloat(longitude as string)
-      : 0) - 0.35
-  }%2C${
-        (typeof latitude === "string" || typeof latitude === "number"
-          ? parseFloat(latitude as string)
-          : 0) - 0.35
-      }%2C${
-        (typeof longitude === "string" || typeof longitude === "number"
-          ? parseFloat(longitude as string)
-          : 0) + 0.35
-      }%2C${
-        (typeof latitude === "string" || typeof latitude === "number"
-          ? parseFloat(latitude as string)
-          : 0) + 0.35
-      }&amp;layer=mapnik&amp;marker=${latitude}%2C${longitude}" style="border: 1px solid black; max-width: 100%;"></iframe>
+  <div id="map"></div>
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${timezone}</p>
   <p> City: ${
     request.cf?.city
@@ -654,7 +640,44 @@ export default {
       }</p>
   <p> Country: ${request.cf?.country},  Continent: ${
         request.cf?.continent
-      }</p>`;
+      }</p>
+  <script type="text/javascript">
+    var map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://tiles.stadiamaps.com/styles/outdoors.json',  // Style URL; see our documentation for more options
+      center: [${longitude}, ${latitude}],  // Initial focus coordinate
+      zoom: 8
+    });
+
+    // MapLibre GL JS does not handle RTL text by default,
+    // so we recommend adding this dependency to fully support RTL rendering if your style includes RTL text
+    maplibregl.setRTLTextPlugin('https://unpkg.com/@mapbox/mapbox-gl-rtl-text@latest/mapbox-gl-rtl-text.min.js');
+
+    // Add zoom and rotation controls to the map.
+    map.addControl(new maplibregl.NavigationControl());
+
+    // First, we define our marker locations. You can use whatever format you want when
+    // working with custom markers, but we have chosen to use GeoJSON for this example, as
+    // a lot of geospatial data comes in this form. If you have a lot of data, you may want to
+    // put it in another file that is loaded separately.
+    var markerCollection = {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                // NOTE: in GeoJSON notation, LONGITUDE comes first. GeoJSON 
+                // uses x, y coordinate notation
+                "coordinates": [${longitude}, ${latitude}]
+            }
+        }]
+    };
+
+    // Next, we can add markers to the map
+    const marker = new maplibregl.Marker()
+      .setLngLat([${longitude}, ${latitude}])
+      .addTo(map);
+  </script>`;
 
       timing.renderGeolocation = performance.now() - start;
       return html_content;
@@ -1340,7 +1363,7 @@ for (i = 0; i < coll.length; i++) {
         "Cross-Origin-Embedder-Policy": 'require-corp; report-to="default";',
         "Cross-Origin-Opener-Policy": 'same-site; report-to="default";',
         "Cross-Origin-Resource-Policy": "same-site",
-        link: "<https://www.openstreetmap.org>; rel=preconnect, <https://www.openstreetmap.org>; rel=preconnect; crossorigin, <https://tile.openstreetmap.org>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
+        link: "<https://unpkg.com>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
       });
 
       if (
