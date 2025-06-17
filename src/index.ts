@@ -629,19 +629,9 @@ export default {
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <div id="map"></div>
   <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=9/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${timezone}</p>
-  <p> City: ${
-    request.cf?.city
-  }, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${
-        request.cf?.metroCode
-      }</p>
-  <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${
-    request.cf?.region
-  }, RegionCode: ${request.cf?.regionCode}, PostalCode: ${
-        request.cf?.postalCode
-      }</p>
-  <p> Country: ${request.cf?.country},  Continent: ${
-        request.cf?.continent
-      }</p>
+  <p> City: ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf?.metroCode}</p>
+  <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf?.region}, RegionCode: ${request.cf?.regionCode}, PostalCode: ${request.cf?.postalCode}</p>
+  <p> Country: ${request.cf?.country},  Continent: ${request.cf?.continent}</p>
   <script type="text/javascript">
     var map = new maplibregl.Map({
       container: 'map',
@@ -656,23 +646,6 @@ export default {
 
     // Add zoom and rotation controls to the map.
     map.addControl(new maplibregl.NavigationControl());
-
-    // First, we define our marker locations. You can use whatever format you want when
-    // working with custom markers, but we have chosen to use GeoJSON for this example, as
-    // a lot of geospatial data comes in this form. If you have a lot of data, you may want to
-    // put it in another file that is loaded separately.
-    var markerCollection = {
-        "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                // NOTE: in GeoJSON notation, LONGITUDE comes first. GeoJSON 
-                // uses x, y coordinate notation
-                "coordinates": [${longitude}, ${latitude}]
-            }
-        }]
-    };
 
     // Next, we can add markers to the map
     const marker = new maplibregl.Marker()
