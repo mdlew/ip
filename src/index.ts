@@ -1064,7 +1064,7 @@ export default {
         }
         // parse alert data
         if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
-          html_content += `<li><h3>Alerts ⚠️</h3>`;
+          html_content += `<li><h3>⚠️ Alerts</h3>`;
           for (let i = 0; i < nwsAlertData.length; i++) {
             let alertInfo = nwsAlertData[i].properties;
             html_content += `<br /><button class="collapsible"> ${await nwsAlertResponseToEmoji(
