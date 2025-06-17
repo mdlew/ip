@@ -604,6 +604,7 @@ export default {
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
 	<link rel="apple-touch-icon" href="/favicon.ico">
 	<link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://tiles.stadiamaps.com" />
 	<link rel="preconnect" href="https://radar.weather.gov" />
 	<script type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
@@ -1363,7 +1364,7 @@ for (i = 0; i < coll.length; i++) {
         "Cross-Origin-Embedder-Policy": 'require-corp; report-to="default";',
         "Cross-Origin-Opener-Policy": 'same-site; report-to="default";',
         "Cross-Origin-Resource-Policy": "same-site",
-        link: "<https://unpkg.com>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
+        link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
       });
 
       if (
