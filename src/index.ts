@@ -225,6 +225,13 @@ export default {
       }
       return css + ")";
     }
+    async function statusEmoji(fetchSuccess: boolean) {
+      if (fetchSuccess) {
+        return "✅"; // Success
+      } else {
+        return "❌"; // Error
+      }
+    }
     async function aqiToEmoji(AQI: number) {
       if (AQI == undefined) {
         return ""; // If undefined, return empty string
@@ -588,7 +595,7 @@ export default {
  #container{display: flex; flex-direction:column;min-height: 100%;}
  body{background: ${await toCSSGradient(
    hour
- )};} h1{color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}
+ )};} h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}
  .collapsible {  background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none; }
  .active, .collapsible:hover {  background-color: #59230B;}
  .collapsible:after {  content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {  content: '➖';}
@@ -657,7 +664,7 @@ export default {
       return html_content;
     }
 
-    async function renderWeather() {
+    async function renderWeather(): Promise<[string, any, any, any]> {
       const start = performance.now();
       let html_content = "  <h1>Weather 🌦</h1>";
 
@@ -951,7 +958,7 @@ export default {
       waqiData: any,
       nwsPointsData: any,
       airnowSensorData: any
-    ): Promise<string> {
+    ): Promise<[string, any, any, any]> {
       const start = performance.now();
 
       // prepare to fetch data from APIs
@@ -1068,7 +1075,9 @@ export default {
               alertInfo?.response
             )} ${alertInfo?.response}, ${await nwsAlertSeverityToEmoji(
               alertInfo?.severity
-            )} ${alertInfo?.severity}: ${
+            )} ${alertInfo?.severity}: ${await nwsAlertEventToEmoji(
+              alertInfo?.headline
+            )} ${
               alertInfo?.headline
             }</button><div class="content"><h3> ${await nwsAlertEventToEmoji(
               alertInfo?.event
@@ -1182,10 +1191,22 @@ export default {
       }
 
       timing.renderForecast = performance.now() - start;
-      return html_content;
+      return [
+        html_content,
+        nwsAlertData,
+        nwsForecastData,
+        airnowForecastData,
+      ] as [string, any, any, any];
     }
 
-    async function renderFooter() {
+    async function renderFooter(
+      waqiSuccess: boolean,
+      nwsPointsSuccess: boolean,
+      airnowSensorSuccess: boolean,
+      nwsAlertSuccess: boolean,
+      nwsForecastSuccess: boolean,
+      airnowForecastSuccess: boolean
+    ) {
       const start = performance.now();
       const userAgentStr = request.headers.get("User-Agent");
 
@@ -1208,7 +1229,15 @@ export default {
         timing.renderForecast +
         performance.now() -
         start
-      } ms.</p>
+      } ms. NWS location ${statusEmoji(
+        nwsPointsSuccess
+      )}. NWS alert ${statusEmoji(nwsAlertSuccess)}. NWS forecast ${statusEmoji(
+        nwsForecastSuccess
+      )}. AirNow forecast ${statusEmoji(
+        airnowForecastSuccess
+      )}. Airnow sensor ${statusEmoji(airnowSensorSuccess)}. WAQI ${statusEmoji(
+        waqiSuccess
+      )}.</p>
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
@@ -1242,18 +1271,31 @@ for (i = 0; i < coll.length; i++) {
       await writer.ready;
       writer.write(encoder.encode(await renderGeolocation()));
 
-      const [html_content, waqiData, nwsPointsData, airnowSensorData] =
+      const [weatherContent, waqiData, nwsPointsData, airnowSensorData] =
         await renderWeather();
       await writer.ready;
-      writer.write(encoder.encode(html_content));
+      writer.write(encoder.encode(weatherContent));
+      const [
+        forecastContent,
+        nwsAlertData,
+        nwsForecastData,
+        airnowForecastData,
+      ] = await renderForecast(waqiData, nwsPointsData, airnowSensorData);
+      await writer.ready;
+      writer.write(encoder.encode(forecastContent));
       await writer.ready;
       writer.write(
         encoder.encode(
-          await renderForecast(waqiData, nwsPointsData, airnowSensorData)
+          await renderFooter(
+            !(waqiData == undefined),
+            !(nwsPointsData == undefined),
+            !(airnowSensorData == undefined),
+            nwsAlertData != undefined,
+            nwsForecastData != undefined,
+            airnowForecastData != undefined
+          )
         )
       );
-      await writer.ready;
-      writer.write(encoder.encode(await renderFooter()));
 
       // Call ready to ensure that all chunks are written
       // before closing the writer.
