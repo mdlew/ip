@@ -666,7 +666,6 @@ export default {
 
     async function renderWeather(): Promise<[string, any, any, any]> {
       const start = performance.now();
-      let html_content = "  <h1>Weather 🌦</h1>";
 
       // issue concurrent requests to WAQI, NWS, AirNow APIs
       let waqiData = undefined;
@@ -806,7 +805,7 @@ export default {
 
       // ********************************************************************************************************************
       // build HTML content
-      html_content += `<p> Temperature: ${floatFormat.format(
+      let html_content = `<h1>Current Conditions 🌡️</h1><p> Temperature: ${floatFormat.format(
         tempF
       )} °F (${floatFormat.format(
         !(waqiData == undefined) ? waqiData.iaqi.t?.v : NaN
@@ -837,7 +836,13 @@ export default {
       if (!(airnowOverall.AQI == undefined)) {
         html_content += ` (AirNow: ${await aqiToEmoji(airnowOverall.AQI)} ${
           airnowOverall.AQI
-        } AQI, ${airnowOverall.category})</p>`;
+        } AQI, ${
+          airnowOverall.category
+        }, <a href="https://www.airnow.gov/?city=${encodeURIComponent(
+          airnowSensorData[0].ReportingArea
+        )}&state=${
+          airnowSensorData[0].StateCode
+        }&country=USA">current conditions</a>)</p>`;
       } else {
         html_content += `</p>`;
       }
@@ -1055,23 +1060,16 @@ export default {
 
       // ********************************************************************************************************************
       // build HTML content
-      if (
-        nwsAlertRequestSuccess ||
-        nwsForecastRequestSuccess ||
-        airnowForecastRequestSuccess
-      ) {
-        html_content += ` <h3>Forecast 🔮</h3>`;
-      }
       if (!(nwsPointsData == undefined)) {
         if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
-          html_content += `<p> NWS (<a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a>):</p><ul>`;
+          html_content += `<h1>NWS Forecast 🌦️ </h1><p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a></p>`;
         }
         // parse alert data
         if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
-          html_content += `<li><h3>⚠️ Alerts</h3>`;
+          html_content += `<h2>⚠️ Alerts</h2>`;
           for (let i = 0; i < nwsAlertData.length; i++) {
             let alertInfo = nwsAlertData[i].properties;
-            html_content += `<br /><button class="collapsible"> ${await nwsAlertResponseToEmoji(
+            html_content += `<div><button class="collapsible"> ${await nwsAlertResponseToEmoji(
               alertInfo?.response
             )} ${alertInfo?.response}, ${await nwsAlertSeverityToEmoji(
               alertInfo?.severity
@@ -1097,9 +1095,8 @@ export default {
               new Date(alertInfo?.sent)
             )}, Expires: ${dateFormat.format(
               new Date(alertInfo?.expires)
-            )}</p></div>`;
+            )}</p></div></div>`;
           }
-          html_content += `</li>`;
         }
         // parse forecast data
         if (nwsForecastRequestSuccess) {
@@ -1108,31 +1105,18 @@ export default {
             i < Math.min(4, nwsForecastData.periods.length);
             i++
           ) {
-            html_content += `<li>${
+            html_content += `<p>${
               nwsForecastData.periods[i].name
             }: ${await nwsForecastIconToEmoji(
               nwsForecastData.periods[i].icon
-            )} ${nwsForecastData.periods[i].detailedForecast}</li>`;
+            )} ${nwsForecastData.periods[i].detailedForecast}</p>`;
           }
         }
-        html_content += `</ul>`;
       }
 
       if (airnowForecastRequestSuccess) {
         const firstAirnowForecast = airnowForecastData[0];
-        html_content += `<p> AirNow forecast for <a href="https://www.openstreetmap.org/?mlat=${
-          firstAirnowForecast.Latitude
-        }&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${
-          firstAirnowForecast.Latitude
-        }/${firstAirnowForecast.Longitude}">${
-          firstAirnowForecast.ReportingArea
-        }, ${
-          firstAirnowForecast.StateCode
-        }</a> (<a href="https://www.airnow.gov/?city=${encodeURIComponent(
-          firstAirnowForecast.ReportingArea
-        )}&state=${
-          firstAirnowForecast.StateCode
-        }&country=USA">current conditions</a>):</p><ul>`;
+        html_content += `<h1> AirNow Forecast</h1><p> <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a></p><p>`;
         let airnowDateIdx = 0;
         let newDate = true;
         for (let i = 0; i < airnowForecastData.length; i++) {
@@ -1145,15 +1129,15 @@ export default {
             newDate = true;
             airnowDateIdx++;
             if (i > 0) {
-              html_content += `</li>`;
+              html_content += `</p>`;
             }
           }
           // if date matches, then push data to HTML
           if (currAirnowData?.DateForecast === airnowDateStr[airnowDateIdx]) {
             if (newDate) {
-              html_content += `<li>${dayStr[airnowDateIdx]}: `;
+              html_content += `<p>${dayStr[airnowDateIdx]}: `;
               if (currAirnowData?.ActionDay) {
-                html_content += `<h3>⚠️ Action day</h3><br />`;
+                html_content += `<h2>⚠️ Action day</h2><br />`;
               }
               newDate = false;
             } else {
@@ -1168,7 +1152,7 @@ export default {
             html_content += ` ${currAirnowData.Category.Name}`;
           }
         }
-        html_content += `</li>`;
+        html_content += `</p>`;
         // add discussion if available
         if (
           !(firstAirnowForecast?.Discussion == undefined) &&
@@ -1178,16 +1162,15 @@ export default {
             typeof firstAirnowForecast.Discussion === "string" &&
             URL.canParse(firstAirnowForecast.Discussion)
           ) {
-            html_content += `<li><a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></li>`;
+            html_content += `<p><a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></p>`;
           } else {
-            html_content += `<li><button class="collapsible">Discussion</button><div class="content"><p>${
+            html_content += `<div><button class="collapsible">Discussion</button><div class="content"><p>${
               typeof firstAirnowForecast.Discussion === "string"
                 ? firstAirnowForecast.Discussion
                 : ""
-            }</p></div></li>`;
+            }</p></div></div>`;
           }
         }
-        html_content += `</ul>`;
       }
 
       timing.renderForecast = performance.now() - start;
