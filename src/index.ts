@@ -1058,7 +1058,7 @@ export default {
       let html_content = "";
       if (!(nwsPointsData == undefined)) {
         if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
-          html_content += `<h1>NWS Forecast 🌦️ </h1><p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a></p>`;
+          html_content += `<h1>NWS Forecast 🌦️</h1><p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a></p>`;
         }
         // parse alert data
         if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
@@ -1101,7 +1101,7 @@ export default {
             i < Math.min(4, nwsForecastData.periods.length);
             i++
           ) {
-            html_content += `<p>${
+            html_content += `<p> ${
               nwsForecastData.periods[i].name
             }: ${await nwsForecastIconToEmoji(
               nwsForecastData.periods[i].icon
@@ -1112,7 +1112,11 @@ export default {
 
       if (airnowForecastRequestSuccess) {
         const firstAirnowForecast = airnowForecastData[0];
-        html_content += `<h1> AirNow Forecast</h1><p> <a href="https://www.openstreetmap.org/?mlat=${firstAirnowForecast.Latitude}&amp;mlon=${firstAirnowForecast.Longitude}#map=9/${firstAirnowForecast.Latitude}/${firstAirnowForecast.Longitude}">${firstAirnowForecast.ReportingArea}, ${firstAirnowForecast.StateCode}</a></p><p>`;
+        html_content += `<h1>AirNow Forecast 🌬️</h1><p> <a href="https://www.airnow.gov/?city=${encodeURIComponent(
+          firstAirnowForecast.ReportingArea
+        )}&state=${firstAirnowForecast.StateCode}&country=USA">${
+          firstAirnowForecast.ReportingArea
+        }, ${firstAirnowForecast.StateCode}</a></p>`;
         let airnowDateIdx = 0;
         let newDate = true;
         for (let i = 0; i < airnowForecastData.length; i++) {
@@ -1131,7 +1135,7 @@ export default {
           // if date matches, then push data to HTML
           if (currAirnowData?.DateForecast === airnowDateStr[airnowDateIdx]) {
             if (newDate) {
-              html_content += `<p>${dayStr[airnowDateIdx]}: `;
+              html_content += `<p> ${dayStr[airnowDateIdx]}: `;
               if (currAirnowData?.ActionDay) {
                 html_content += `<h2>⚠️ Action day</h2><br />`;
               }
@@ -1158,7 +1162,7 @@ export default {
             typeof firstAirnowForecast.Discussion === "string" &&
             URL.canParse(firstAirnowForecast.Discussion)
           ) {
-            html_content += `<p><a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></p>`;
+            html_content += `<p> <a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></p>`;
           } else {
             html_content += `<div><button class="collapsible">Discussion</button><div class="content"><p>${
               typeof firstAirnowForecast.Discussion === "string"
