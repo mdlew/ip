@@ -1229,15 +1229,17 @@ export default {
         timing.renderForecast +
         performance.now() -
         start
-      } ms. NWS location ${statusEmoji(
+      } ms. NWS location ${await statusEmoji(
         nwsPointsSuccess
-      )}. NWS alert ${statusEmoji(nwsAlertSuccess)}. NWS forecast ${statusEmoji(
+      )}. NWS alert ${await statusEmoji(
+        nwsAlertSuccess
+      )}. NWS forecast ${await statusEmoji(
         nwsForecastSuccess
-      )}. AirNow forecast ${statusEmoji(
+      )}. AirNow forecast ${await statusEmoji(
         airnowForecastSuccess
-      )}. Airnow sensor ${statusEmoji(airnowSensorSuccess)}. WAQI ${statusEmoji(
-        waqiSuccess
-      )}.</p>
+      )}. Airnow sensor ${await statusEmoji(
+        airnowSensorSuccess
+      )}. WAQI ${await statusEmoji(waqiSuccess)}.</p>
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
