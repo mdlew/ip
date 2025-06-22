@@ -688,8 +688,6 @@ export default {
           ),
         ]);
       } catch (e) {
-        html_content += `<p> Error: ${e}</p>`;
-        html_content += `<p> ${(e as Error).stack}</p>`;
         console.log({ error: e, error_stack: (e as Error).stack });
       }
       const waqiRequestSuccess =
@@ -979,7 +977,6 @@ export default {
       ];
       const dayStr = ["Today", "Tomorrow"];
 
-      let html_content = "";
       let nwsCounty = undefined;
       if (!(nwsPointsData == undefined)) {
         nwsCounty = nwsPointsData.county.split("/");
@@ -1013,8 +1010,6 @@ export default {
             ),
           ]);
       } catch (e) {
-        html_content += `<p> Error: ${e}</p>`;
-        html_content += `<p> ${(e as Error).stack}</p>`;
         console.log({ error: e, error_stack: (e as Error).stack });
       }
       const nwsAlertRequestSuccess =
@@ -1060,6 +1055,7 @@ export default {
 
       // ********************************************************************************************************************
       // build HTML content
+      let html_content = "";
       if (!(nwsPointsData == undefined)) {
         if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
           html_content += `<h1>NWS Forecast 🌦️ </h1><p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a></p>`;
