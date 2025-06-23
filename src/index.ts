@@ -834,13 +834,7 @@ export default {
       if (!(airnowOverall.AQI == undefined)) {
         html_content += ` (AirNow: ${await aqiToEmoji(airnowOverall.AQI)} ${
           airnowOverall.AQI
-        } AQI, ${
-          airnowOverall.category
-        }, <a href="https://www.airnow.gov/?city=${encodeURIComponent(
-          airnowSensorData[0].ReportingArea
-        )}&state=${
-          airnowSensorData[0].StateCode
-        }&country=USA">current conditions</a>)</p>`;
+        } AQI, ${airnowOverall.category})</p>`;
       } else {
         html_content += `</p>`;
       }
@@ -949,7 +943,15 @@ export default {
       }
       if (!(airnowSensorData == undefined)) {
         const firstAirnowSensor = airnowSensorData[0];
-        html_content += `<p> AirNow data from <a href="https://www.openstreetmap.org/?mlat=${firstAirnowSensor.Latitude}&amp;mlon=${firstAirnowSensor.Longitude}#map=9/${firstAirnowSensor.Latitude}/${firstAirnowSensor.Longitude}">${firstAirnowSensor.ReportingArea}, ${firstAirnowSensor.StateCode}</a>, measured on ${firstAirnowSensor.DateObserved}, ${firstAirnowSensor.HourObserved}:00 ${firstAirnowSensor.LocalTimeZone}</p>`;
+        html_content += `<p> AirNow data from <a href="https://www.airnow.gov/?city=${encodeURIComponent(
+          firstAirnowSensor.ReportingArea
+        )}&state=${firstAirnowSensor.StateCode}&country=USA">${
+          firstAirnowSensor.ReportingArea
+        }, ${firstAirnowSensor.StateCode}</a>, measured on ${
+          firstAirnowSensor.DateObserved
+        }, ${firstAirnowSensor.HourObserved}:00 ${
+          firstAirnowSensor.LocalTimeZone
+        }</p>`;
       }
       // html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
