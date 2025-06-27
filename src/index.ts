@@ -664,7 +664,9 @@ export default {
       return html_content;
     }
 
-    async function renderWeather(): Promise<[string, any, any, any]> {
+    async function renderWeather(): Promise<
+      [string, any, any, boolean, boolean, boolean]
+    > {
       const start = performance.now();
 
       // issue concurrent requests to WAQI, NWS, AirNow APIs
@@ -956,14 +958,20 @@ export default {
       // html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
       timing.renderWeather = performance.now() - start;
-      return [html_content, waqiData, nwsPointsData, airnowSensorData];
+      return [
+        html_content,
+        nwsPointsData,
+        airnowSensorData,
+        waqiRequestSuccess,
+        nwsPointsRequestSuccess,
+        airnowSensorRequestSuccess,
+      ];
     }
 
     async function renderForecast(
-      waqiData: any,
       nwsPointsData: any,
       airnowSensorData: any
-    ): Promise<[string, any, any, any]> {
+    ): Promise<[string, boolean, boolean, boolean]> {
       const start = performance.now();
 
       // prepare to fetch data from APIs
@@ -1178,10 +1186,10 @@ export default {
       timing.renderForecast = performance.now() - start;
       return [
         html_content,
-        nwsAlertData,
-        nwsForecastData,
-        airnowForecastData,
-      ] as [string, any, any, any];
+        nwsAlertRequestSuccess,
+        nwsForecastRequestSuccess,
+        airnowForecastRequestSuccess,
+      ];
     }
 
     async function renderFooter(
@@ -1258,28 +1266,34 @@ for (i = 0; i < coll.length; i++) {
       await writer.ready;
       writer.write(encoder.encode(await renderGeolocation()));
 
-      const [weatherContent, waqiData, nwsPointsData, airnowSensorData] =
-        await renderWeather();
+      const [
+        weatherContent,
+        nwsPointsData,
+        airnowSensorData,
+        waqiRequestSuccess,
+        nwsPointsRequestSuccess,
+        airnowSensorRequestSuccess,
+      ] = await renderWeather();
       await writer.ready;
       writer.write(encoder.encode(weatherContent));
       const [
         forecastContent,
-        nwsAlertData,
-        nwsForecastData,
-        airnowForecastData,
-      ] = await renderForecast(waqiData, nwsPointsData, airnowSensorData);
+        nwsAlertRequestSuccess,
+        nwsForecastRequestSuccess,
+        airnowForecastRequestSuccess,
+      ] = await renderForecast(nwsPointsData, airnowSensorData);
       await writer.ready;
       writer.write(encoder.encode(forecastContent));
       await writer.ready;
       writer.write(
         encoder.encode(
           await renderFooter(
-            !(waqiData == undefined),
-            !(nwsPointsData == undefined),
-            !(airnowSensorData == undefined),
-            nwsAlertData != undefined,
-            nwsForecastData != undefined,
-            airnowForecastData != undefined
+            waqiRequestSuccess,
+            nwsPointsRequestSuccess,
+            airnowSensorRequestSuccess,
+            nwsAlertRequestSuccess,
+            nwsForecastRequestSuccess,
+            airnowForecastRequestSuccess
           )
         )
       );
