@@ -1024,6 +1024,9 @@ export default {
       }
       const nwsAlertRequestSuccess =
         !(nwsAlertData == undefined) &&
+        nwsAlertData.status === "fulfilled";
+      const nwsAlertSuccess =
+        !(nwsAlertData == undefined) &&
         nwsAlertData.status === "fulfilled" &&
         nwsAlertData.value !== undefined &&
         typeof nwsAlertData.value === "object" &&
@@ -1032,6 +1035,9 @@ export default {
         (nwsAlertData.value as any).features.length > 0;
       const nwsForecastRequestSuccess =
         !(nwsForecastData == undefined) &&
+        nwsForecastData.status === "fulfilled";
+      const nwsForecastSuccess =
+        !(nwsForecastData == undefined) &&
         nwsForecastData.status === "fulfilled" &&
         nwsForecastData.value !== undefined &&
         typeof nwsForecastData.value === "object" &&
@@ -1039,24 +1045,27 @@ export default {
         "properties" in nwsForecastData.value;
       const airnowForecastRequestSuccess =
         !(airnowForecastData == undefined) &&
+        airnowForecastData.status === "fulfilled";
+      const airnowForecastSuccess =
+        !(airnowForecastData == undefined) &&
         airnowForecastData.status === "fulfilled" &&
         Array.isArray(airnowForecastData.value) &&
         airnowForecastData.value.length > 0;
       // parse responses if successful
-      if (nwsAlertRequestSuccess) {
+      if (nwsAlertSuccess) {
         const value = (nwsAlertData as PromiseFulfilledResult<any>).value;
         nwsAlertData = (value as { features: any[] }).features;
       } else {
         nwsAlertData = undefined;
       }
-      if (nwsForecastRequestSuccess) {
+      if (nwsForecastSuccess) {
         // TypeScript now knows nwsForecastData is fulfilled
         nwsForecastData = (nwsForecastData as PromiseFulfilledResult<any>).value
           .properties;
       } else {
         nwsForecastData = undefined;
       }
-      if (airnowForecastRequestSuccess) {
+      if (airnowForecastSuccess) {
         airnowForecastData = (airnowForecastData as PromiseFulfilledResult<any>)
           .value;
       } else {
@@ -1067,11 +1076,11 @@ export default {
       // build HTML content
       let html_content = "";
       if (!(nwsPointsData == undefined)) {
-        if (nwsForecastRequestSuccess || nwsAlertRequestSuccess) {
+        if (nwsForecastSuccess || nwsAlertSuccess) {
           html_content += `<h1>NWS Forecast 🌦️</h1><p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a></p>`;
         }
         // parse alert data
-        if (nwsAlertRequestSuccess && Array.isArray(nwsAlertData)) {
+        if (nwsAlertSuccess && Array.isArray(nwsAlertData)) {
           html_content += `<h2>⚠️ Alerts</h2>`;
           for (let i = 0; i < nwsAlertData.length; i++) {
             let alertInfo = nwsAlertData[i].properties;
@@ -1105,7 +1114,7 @@ export default {
           }
         }
         // parse forecast data
-        if (nwsForecastRequestSuccess) {
+        if (nwsForecastSuccess) {
           for (
             let i = 0;
             i < Math.min(4, nwsForecastData.periods.length);
@@ -1120,7 +1129,7 @@ export default {
         }
       }
 
-      if (airnowForecastRequestSuccess) {
+      if (airnowForecastSuccess) {
         const firstAirnowForecast = airnowForecastData[0];
         html_content += `<h1>AirNow Forecast 🌬️</h1><p> <a href="https://www.airnow.gov/?city=${encodeURIComponent(
           firstAirnowForecast.ReportingArea
