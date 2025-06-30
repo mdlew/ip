@@ -90,7 +90,6 @@ function renderHead(): string {
   <link rel="apple-touch-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://tiles.stadiamaps.com" />
-  <link rel="preconnect" href="https://radar.weather.gov" />
   <script nonce="${user.nonce}" type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
@@ -400,7 +399,7 @@ async function renderWeather(
 
   // add NWS radar loop if available
   if (!(nwsPointsData == undefined)) {
-    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsData?.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="/radarproxy/?id=${nwsPointsData?.radarStation}" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
   }
 
   if (!(waqiData == undefined)) {
@@ -713,7 +712,9 @@ function renderFooter(
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
-<script nonce="${user.nonce}"> /* Script borrowed from https://www.w3schools.com/howto/howto_js_collapsible.asp */
+<script nonce="${
+    user.nonce
+  }"> /* Script borrowed from https://www.w3schools.com/howto/howto_js_collapsible.asp */
 var coll = document.getElementsByClassName("collapsible");
 var i;
 for (i = 0; i < coll.length; i++) {
@@ -740,7 +741,7 @@ export async function renderPage(
   writer: WritableStreamDefaultWriter,
   request: Request,
   env: Env,
-  nonce: string,
+  nonce: string
 ): Promise<void> {
   const start = performance.now();
 
