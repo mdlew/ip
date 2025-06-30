@@ -400,7 +400,7 @@ async function renderWeather(
 
   // add NWS radar loop if available
   if (!(nwsPointsData == undefined)) {
-    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" crossorigin src="https://radar.weather.gov/ridge/standard/${nwsPointsData?.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="https://radar.weather.gov/ridge/standard/${nwsPointsData?.radarStation}_loop.gif" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
   }
 
   if (!(waqiData == undefined)) {
