@@ -27,6 +27,24 @@ const floatFormat = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
 
+// User information
+const user = {
+  timezone: "America/New_York",
+  localizedDate: new Date(),
+  dateFormat: new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZoneName: "short",
+  }),
+  latitude: "40.712778", // default to NYC
+  longitude: "-74.006111", // default to NYC
+};
+
 // performance JSON object
 const timing = {
   renderHead: NaN,
@@ -41,12 +59,7 @@ const timing = {
 function renderHead(request: Request): string {
   const start = performance.now();
 
-  const timezone =
-    typeof request.cf?.timezone === "string" ? request.cf.timezone : undefined;
-  const localized_date = new Date(
-    new Date().toLocaleString("en-US", { timeZone: timezone })
-  );
-  const hour = localized_date.getHours();
+  const hour = user.localizedDate.getHours();
   let accentColor = "#f6821f";
   let textColor = "white";
   if (hour >= 7 && hour < 13) {
@@ -92,12 +105,6 @@ function renderHead(request: Request): string {
 function renderGeolocation(request: Request): string {
   const start = performance.now();
 
-  const timezone =
-    typeof request.cf?.timezone === "string" ? request.cf.timezone : undefined;
-  // pull location data, use to generate API requests
-  const latitude = request.cf?.latitude;
-  const longitude = request.cf?.longitude;
-
   const clientIP = request.headers.get("CF-Connecting-IP");
   const clientASN = request.cf?.asn;
   const clientISP = request.cf?.asOrganization;
@@ -106,7 +113,7 @@ function renderGeolocation(request: Request): string {
   <p> Public IP: ${clientIP} (<a href="https://radar.cloudflare.com/ip/${clientIP}">Cloudflare radar</a>)</p>
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <div id="map"></div>
-  <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${latitude}&amp;mlon=${longitude}#map=11/${latitude}/${longitude}">(${latitude}, ${longitude})</a>, Timezone: ${timezone}</p>
+  <p> Coordinates: <a href="https://www.openstreetmap.org/?mlat=${user.latitude}&amp;mlon=${user.longitude}#map=11/${user.latitude}/${user.longitude}">(${user.latitude}, ${user.longitude})</a>, Timezone: ${user.timezone}</p>
   <p> City: ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf?.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf?.region}, RegionCode: ${request.cf?.regionCode}, PostalCode: ${request.cf?.postalCode}</p>
   <p> Country: ${request.cf?.country},  Continent: ${request.cf?.continent}</p>
@@ -114,7 +121,7 @@ function renderGeolocation(request: Request): string {
     var map = new maplibregl.Map({
       container: 'map',
       style: 'https://tiles.stadiamaps.com/styles/outdoors.json',  // Style URL; see our documentation for more options
-      center: [${longitude}, ${latitude}],  // Initial focus coordinate
+      center: [${user.longitude}, ${user.latitude}],  // Initial focus coordinate
       zoom: 11
     });
 
@@ -127,7 +134,7 @@ function renderGeolocation(request: Request): string {
 
     // Next, we can add markers to the map
     const marker = new maplibregl.Marker()
-      .setLngLat([${longitude}, ${latitude}])
+      .setLngLat([${user.longitude}, ${user.latitude}])
       .addTo(map);
   </script>`;
 
@@ -141,32 +148,15 @@ async function renderWeather(
 ): Promise<[string, any, any, boolean, boolean, boolean]> {
   const start = performance.now();
 
-  const timezone =
-    typeof request.cf?.timezone === "string" ? request.cf.timezone : undefined;
-  const dateFormat = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone: timezone,
-    timeZoneName: "short",
-  });
-
-  // pull location data, use to generate API requests
-  const latitude = request.cf?.latitude;
-  const longitude = request.cf?.longitude;
   // WAQI API setup https://aqicn.org/api/
-  const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${env.WAQI_TOKEN}`;
+  const waqiApiRequestUrl = `https://api.waqi.info/feed/geo:${user.latitude};${user.longitude}/?token=${env.WAQI_TOKEN}`;
   const waqiRequestInit = {
     headers: {
       "content-type": "application/json;charset=UTF-8",
     },
   };
   // https://www.weather.gov/documentation/services-web-api API setup
-  const nwsPointsRequestUrl = `https://api.weather.gov/points/${latitude},${longitude}`;
+  const nwsPointsRequestUrl = `https://api.weather.gov/points/${user.latitude},${user.longitude}`;
   const nwsRequestInit = {
     headers: {
       accept: "application/geo+json",
@@ -174,7 +164,7 @@ async function renderWeather(
     },
   };
   // AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
-  const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${latitude}&longitude=${longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+  const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${user.latitude}&longitude=${user.longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
   const airnowRequestInit = {
     headers: {
       "content-type": "application/json;charset=UTF-8",
@@ -354,21 +344,11 @@ async function renderWeather(
   )} ${!(waqiData == undefined) ? waqiData.iaqi.pm25?.v + " AQI" : "N/A"} `;
   if (!(airnowPM25.AQI == undefined)) {
     html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${
-      (typeof longitude === "string" || typeof longitude === "number"
-        ? lon2x(parseFloat(longitude as string))
-        : 0) - 200000
-    }&xmax=${
-      (typeof longitude === "string" || typeof longitude === "number"
-        ? lon2x(parseFloat(longitude as string))
-        : 0) + 200000
-    }&ymin=${
-      (typeof latitude === "string" || typeof latitude === "number"
-        ? lat2y(parseFloat(latitude as string))
-        : 0) - 200000
+      lon2x(parseFloat(user.longitude)) - 200000
+    }&xmax=${lon2x(parseFloat(user.longitude)) + 200000}&ymin=${
+      lat2y(parseFloat(user.latitude)) - 200000
     }&ymax=${
-      (typeof latitude === "string" || typeof latitude === "number"
-        ? lat2y(parseFloat(latitude as string))
-        : 0) + 200000
+      lat2y(parseFloat(user.latitude)) + 200000
     }&monitors=pm25&contours=pm25">AirNow</a>: ${aqiToEmoji(airnowPM25.AQI)} ${
       airnowPM25.AQI
     } AQI, ${airnowPM25.category})</p>`;
@@ -380,21 +360,11 @@ async function renderWeather(
   )} ${!(waqiData == undefined) ? waqiData.iaqi.pm10?.v + " AQI" : "N/A"} `;
   if (!(airnowPM10.AQI == undefined)) {
     html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${
-      (typeof longitude === "string" || typeof longitude === "number"
-        ? lon2x(parseFloat(longitude as string))
-        : 0) - 200000
-    }&xmax=${
-      (typeof longitude === "string" || typeof longitude === "number"
-        ? lon2x(parseFloat(longitude as string))
-        : 0) + 200000
-    }&ymin=${
-      (typeof latitude === "string" || typeof latitude === "number"
-        ? lat2y(parseFloat(latitude as string))
-        : 0) - 200000
+      lon2x(parseFloat(user.longitude)) - 200000
+    }&xmax=${lon2x(parseFloat(user.longitude)) + 200000}&ymin=${
+      lat2y(parseFloat(user.latitude)) - 200000
     }&ymax=${
-      (typeof latitude === "string" || typeof latitude === "number"
-        ? lat2y(parseFloat(latitude as string))
-        : 0) + 200000
+      lat2y(parseFloat(user.latitude)) + 200000
     }&monitors=pm10&contours=ozonepm">AirNow</a>: ${aqiToEmoji(
       airnowPM10.AQI
     )} ${airnowPM10.AQI} AQI, ${airnowPM10.category})</p>`;
@@ -406,21 +376,11 @@ async function renderWeather(
   )} ${!(waqiData == undefined) ? waqiData.iaqi.o3?.v + " AQI" : "N/A"} `;
   if (!(airnowO3.AQI == undefined)) {
     html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${
-      (typeof longitude === "string" || typeof longitude === "number"
-        ? lon2x(parseFloat(longitude as string))
-        : 0) - 200000
-    }&xmax=${
-      (typeof longitude === "string" || typeof longitude === "number"
-        ? lon2x(parseFloat(longitude as string))
-        : 0) + 200000
-    }&ymin=${
-      (typeof latitude === "string" || typeof latitude === "number"
-        ? lat2y(parseFloat(latitude as string))
-        : 0) - 200000
+      lon2x(parseFloat(user.longitude)) - 200000
+    }&xmax=${lon2x(parseFloat(user.longitude)) + 200000}&ymin=${
+      lat2y(parseFloat(user.latitude)) - 200000
     }&ymax=${
-      (typeof latitude === "string" || typeof latitude === "number"
-        ? lat2y(parseFloat(latitude as string))
-        : 0) + 200000
+      lat2y(parseFloat(user.latitude)) + 200000
     }&contours=ozone&monitors=ozone">AirNow</a>: ${aqiToEmoji(airnowO3.AQI)} ${
       airnowO3.AQI
     } AQI, ${airnowO3.category})</p>`;
@@ -443,7 +403,7 @@ async function renderWeather(
   }
 
   if (!(waqiData == undefined)) {
-    const waqiTime = dateFormat.format(new Date(waqiData.time.iso));
+    const waqiTime = user.dateFormat.format(new Date(waqiData.time.iso));
     html_content += `<p> Sensor data from <a href="${waqiData.city.url}">${waqiData.city.name}</a>, measured on ${waqiTime}</p>`;
   }
   if (!(airnowSensorData == undefined)) {
@@ -458,7 +418,7 @@ async function renderWeather(
       firstAirnowSensor.LocalTimeZone
     }</p>`;
   }
-  // html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${latitude}&longitude=${longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
+  // html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${user.latitude}&longitude=${user.longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
   timing.renderWeather = performance.now() - start;
   return [
@@ -479,33 +439,13 @@ async function renderForecast(
 ): Promise<[string, boolean, boolean, boolean]> {
   const start = performance.now();
 
-  // pull location data, use to generate API requests
-  const latitude = request.cf?.latitude;
-  const longitude = request.cf?.longitude;
-  const timezone =
-    typeof request.cf?.timezone === "string" ? request.cf.timezone : undefined;
-  const localized_date = new Date(
-    new Date().toLocaleString("en-US", { timeZone: timezone })
-  );
-  const dateFormat = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone: timezone,
-    timeZoneName: "short",
-  });
-
   // prepare to fetch data from APIs
-  const tomorrow = new Date(localized_date);
-  tomorrow.setDate(localized_date.getDate() + 1);
+  const tomorrow = new Date(user.localizedDate);
+  tomorrow.setDate(user.localizedDate.getDate() + 1);
   const airnowDateStr = [
-    `${localized_date.getFullYear()}-${intFormatTwoDigit.format(
-      localized_date.getMonth() + 1
-    )}-${intFormatTwoDigit.format(localized_date.getDate())}`,
+    `${user.localizedDate.getFullYear()}-${intFormatTwoDigit.format(
+      user.localizedDate.getMonth() + 1
+    )}-${intFormatTwoDigit.format(user.localizedDate.getDate())}`,
     `${tomorrow.getFullYear()}-${intFormatTwoDigit.format(
       tomorrow.getMonth() + 1
     )}-${intFormatTwoDigit.format(tomorrow.getDate())}`,
@@ -525,7 +465,7 @@ async function renderForecast(
       "User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
     },
   };
-  const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${latitude}&longitude=${longitude}&date=&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+  const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${user.latitude}&longitude=${user.longitude}&date=&distance=75&API_KEY=${env.AIRNOW_KEY}`;
   const airnowRequestInit = {
     headers: {
       "content-type": "application/json;charset=UTF-8",
@@ -634,15 +574,15 @@ async function renderForecast(
           alertInfo?.status
         }, Urgency: ${alertInfo?.urgency}, Certainty: ${
           alertInfo?.certainty
-        }</p><p>Onset: ${dateFormat.format(
+        }</p><p>Onset: ${user.dateFormat.format(
           new Date(alertInfo?.onset)
-        )}, Ends: ${dateFormat.format(
+        )}, Ends: ${user.dateFormat.format(
           new Date(alertInfo?.ends)
         )}</p><p>Affected areas: ${alertInfo?.areaDesc}</p><p>Sender: ${
           alertInfo?.senderName
-        }, Sent: ${dateFormat.format(
+        }, Sent: ${user.dateFormat.format(
           new Date(alertInfo?.sent)
-        )}, Expires: ${dateFormat.format(
+        )}, Expires: ${user.dateFormat.format(
           new Date(alertInfo?.expires)
         )}</p></div></div>`;
       }
@@ -742,20 +682,6 @@ function renderFooter(
 ): string {
   const start = performance.now();
 
-  const timezone =
-    typeof request.cf?.timezone === "string" ? request.cf.timezone : undefined;
-  const dateFormat = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone: timezone,
-    timeZoneName: "short",
-  });
-
   const userAgentStr = request.headers.get("User-Agent");
 
   const html_footer = `  <h1>Browser ${userAgentIcon(userAgentStr ?? "")}</h1>
@@ -768,7 +694,7 @@ function renderFooter(
   }</p>
 </div>
 <footer>
-  <p> Page generated on ${dateFormat.format(new Date())} in ${
+  <p> Page generated on ${user.dateFormat.format(new Date())} in ${
     timing.renderHead +
     timing.renderGeolocation +
     timing.renderWeather +
@@ -816,6 +742,34 @@ export async function renderPage(
   env: Env
 ): Promise<void> {
   const start = performance.now();
+
+  user.timezone =
+    typeof request.cf?.timezone === "string"
+      ? request.cf.timezone
+      : "America/New_York";
+  user.localizedDate = new Date(
+    new Date().toLocaleString("en-US", { timeZone: user.timezone })
+  );
+  user.dateFormat = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: user.timezone,
+    timeZoneName: "short",
+  });
+  user.latitude =
+    typeof request.cf?.latitude === "string"
+      ? request.cf.latitude
+      : "40.712778"; // default to NYC
+  user.longitude =
+    typeof request.cf?.longitude === "string"
+      ? request.cf.longitude
+      : "-74.006111"; // default to NYC
+
   const encoder = new TextEncoder();
 
   writer.write(encoder.encode(renderHead(request)));
