@@ -30,7 +30,7 @@ export default {
     // Define static URLs and worker URLs
     const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
     const RADAR_PROXY_URL = "/radarproxy/";
-    const WORKER_URLS = ["/"];
+    const WORKER_URL = "/";
     const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
     // Generate a new random nonce value for every response.
@@ -116,7 +116,7 @@ export default {
     }
 
     // return radar proxy if the request matches a valid radar proxy URL
-    if (url.pathname.startsWith(RADAR_PROXY_URL)) {
+    if (RADAR_PROXY_URL == url.pathname) {
       const radarId = url.searchParams.get("id");
 
       if (radarId && radarId.length == 4) {
@@ -151,7 +151,7 @@ export default {
     }
 
     // else do IP geolocation
-    if (WORKER_URLS.includes(url.pathname)) {
+    if (WORKER_URL == url.pathname) {
       let { readable, writable } = new IdentityTransformStream();
 
       const writer = writable.getWriter();
