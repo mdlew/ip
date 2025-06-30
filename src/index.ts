@@ -7,6 +7,17 @@ export interface Env {
   ASSETS: Fetcher; // Add ASSETS property to the Env interface
 }
 
+async function MethodNotAllowed(request: Request) {
+  console.log({ error: `Method ${request.method} not allowed` });
+  return new Response(`Method ${request.method} not allowed.`, {
+    status: 405,
+    statusText: "Method Not Allowed",
+    headers: {
+      Allow: "GET",
+    },
+  });
+}
+
 export default {
   async fetch(
     request: Request,
@@ -14,9 +25,11 @@ export default {
     ctx: ExecutionContext
   ): Promise<Response> {
     // Response logic ******************************************************
-
     // Return a new Response based on a URL's pathname
+
+    // Define static URLs and worker URLs
     const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
+    const RADAR_PROXY_URL = "/radarproxy/";
     const WORKER_URLS = ["/"];
     const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
@@ -25,22 +38,70 @@ export default {
     crypto.getRandomValues(array);
     const nonce = btoa(String.fromCharCode(...array));
 
-    // return static asset
+    // set default security headers
+    const myHeaders = new Headers({
+      "content-type": "text/html;charset=UTF-8",
+      /*
+			  Secure your application with Content-Security-Policy headers.
+			  Enabling these headers will permit content from a trusted domain and all its subdomains.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+			  */
+      "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none';`,
+      /*
+			  You can also set Strict-Transport-Security headers.
+			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
+			  Here's the code if you want to apply it:
+			  "Strict-Transport-Security" : "max-age=63072000; includeSubDomains; preload",
+			  */
+      /*
+			  Permissions-Policy header provides the ability to allow or deny the use of browser features, such as opting out of FLoC - which you can use below:
+			  'Permissions-Policy': 'interest-cohort=()',
+			  */
+      /*
+			  X-Frame-Options header prevents click-jacking attacks.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
+			  */
+      "X-Frame-Options": "DENY",
+      /*
+			  X-Content-Type-Options header prevents MIME-sniffing.
+			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+			  */
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      /* not working with weather.gov radar:
+        "Cross-Origin-Embedder-Policy": "require-corp",  
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-site", 
+        */
+      link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
+    });
+
+    // Check if the request is secure (HTTPS) and TLS version is 1.2 or higher, return 403 if not
+    if (
+      typeof request.cf?.tlsVersion !== "string" ||
+      !(
+        request.cf.tlsVersion.toUpperCase().includes("TLSV1.2") ||
+        request.cf.tlsVersion.toUpperCase().includes("TLSV1.3")
+      )
+    ) {
+      console.log({
+        error: `TLS version error: "${request.cf?.tlsVersion}"`,
+      });
+      return new Response("Please use TLS version 1.2 or higher.", {
+        status: 403,
+        statusText: "Forbidden",
+      });
+    }
+
+    // Only GET requests work with this proxy.
+    if (request.method !== "GET") {
+      return MethodNotAllowed(request);
+    }
+
+    // return static asset if the request matches a valid static URL
     if (STATIC_URLS.includes(url.pathname)) {
-      async function MethodNotAllowed(request: Request) {
-        console.log({ error: `Method ${request.method} not allowed` });
-        return new Response(`Method ${request.method} not allowed.`, {
-          status: 405,
-          statusText: "Method Not Allowed",
-          headers: {
-            Allow: "GET",
-          },
-        });
-      }
-      // Only GET requests work with this proxy.
-      if (request.method !== "GET") {
-        return MethodNotAllowed(request);
-      }
+      // If the request is for a static asset, fetch it from the ASSETS binding
+      // and return the response.
       try {
         return env.ASSETS.fetch(request);
       } catch (e) {
@@ -56,77 +117,45 @@ export default {
       }
     }
 
-    // else do IP geolocation
-    else {
-      // set default security headers
-      const myHeaders = new Headers({
-        "content-type": "text/html;charset=UTF-8",
-        /*
-			  Secure your application with Content-Security-Policy headers.
-			  Enabling these headers will permit content from a trusted domain and all its subdomains.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-			  */
-			  "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none';`,
-        /*
-			  You can also set Strict-Transport-Security headers.
-			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
-			  Here's the code if you want to apply it:
-			  "Strict-Transport-Security" : "max-age=63072000; includeSubDomains; preload",
-			  */
-        /*
-			  Permissions-Policy header provides the ability to allow or deny the use of browser features, such as opting out of FLoC - which you can use below:
-			  'Permissions-Policy': 'interest-cohort=()',
-			  */
-        /*
-			  X-Frame-Options header prevents click-jacking attacks.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
-			  */
-        "X-Frame-Options": "DENY",
-        /*
-			  X-Content-Type-Options header prevents MIME-sniffing.
-			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
-			  */
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        /* not working with weather.gov radar:
-        "Cross-Origin-Embedder-Policy": "require-corp",  
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Resource-Policy": "same-site", 
-        */
-        link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
-      });
+    // return radar proxy if the request matches a valid radar proxy URL
+    if (url.pathname.startsWith(RADAR_PROXY_URL) && url.hash.length == 5) {
+      const radarGifUrl = `https://radar.weather.gov/ridge/standard/${url.hash.substring(1)}_loop.gif`;
 
-      if (
-        typeof request.cf?.tlsVersion !== "string" ||
-        !(
-          request.cf.tlsVersion.toUpperCase().includes("TLSV1.2") ||
-          request.cf.tlsVersion.toUpperCase().includes("TLSV1.3")
-        )
-      ) {
-        console.log({
-          error: `TLS version error: "${request.cf?.tlsVersion}"`,
-        });
-        return new Response("Please use TLS version 1.2 or higher.", {
-          status: 403,
-          statusText: "Forbidden",
-        });
-      } else if (WORKER_URLS.includes(url.pathname)) {
-        let { readable, writable } = new IdentityTransformStream();
+      // Rewrite request to point to radar URL. This also makes the request mutable
+      // so you can add the correct Origin header to make the API server think
+      // that this request is not cross-site.
+      request = new Request(radarGifUrl, request);
+      request.headers.set("Origin", new URL(radarGifUrl).origin);
 
-        const writer = writable.getWriter();
-        ctx.waitUntil(renderPage(writer, request, env, nonce));
+      let response = await fetch(request);
 
-        return new Response(readable, {
-          headers: myHeaders,
-        });
-      } else {
-        const pathname = url.pathname;
-        console.log({ error: `"${pathname}" not found` });
-        return new Response("Not found", {
-          status: 404,
-          statusText: "Not Found",
-        });
-      }
+      // Recreate the response so you can modify the headers
+      response = new Response(response.body, response);
+      // Set CORS headers
+      response.headers.set("Access-Control-Allow-Origin", url.origin);
+      // Append to/Add Vary header so browser will cache response correctly
+      response.headers.append("Vary", "Origin");
+
+      return response;
     }
+
+    // else do IP geolocation
+    if (WORKER_URLS.includes(url.pathname)) {
+      let { readable, writable } = new IdentityTransformStream();
+
+      const writer = writable.getWriter();
+      ctx.waitUntil(renderPage(writer, request, env, nonce));
+
+      return new Response(readable, {
+        headers: myHeaders,
+      });
+    } 
+
+    // if the request does not match any of the above, return a 404 response
+    console.log({ error: `"${url.pathname}" not found` });
+    return new Response("Not found", {
+      status: 404,
+      statusText: "Not Found",
+    });
   },
 } satisfies ExportedHandler<Env>;
