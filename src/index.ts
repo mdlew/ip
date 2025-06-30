@@ -118,25 +118,29 @@ export default {
     }
 
     // return radar proxy if the request matches a valid radar proxy URL
-    if (url.pathname.startsWith(RADAR_PROXY_URL) && url.hash.length == 5) {
-      const radarGifUrl = `https://radar.weather.gov/ridge/standard/${url.hash.substring(1)}_loop.gif`;
+    if (url.pathname.startsWith(RADAR_PROXY_URL)) {
+      const radarId = url.searchParams.get("id");
 
-      // Rewrite request to point to radar URL. This also makes the request mutable
-      // so you can add the correct Origin header to make the API server think
-      // that this request is not cross-site.
-      request = new Request(radarGifUrl, request);
-      request.headers.set("Origin", new URL(radarGifUrl).origin);
+      if (radarId && radarId.length == 4) {
+        const radarGifUrl = `https://radar.weather.gov/ridge/standard/${radarId.toUpperCase()}_loop.gif`;
 
-      let response = await fetch(request);
+        // Rewrite request to point to radar URL. This also makes the request mutable
+        // so you can add the correct Origin header to make the API server think
+        // that this request is not cross-site.
+        request = new Request(radarGifUrl, request);
+        request.headers.set("Origin", new URL(radarGifUrl).origin);
 
-      // Recreate the response so you can modify the headers
-      response = new Response(response.body, response);
-      // Set CORS headers
-      response.headers.set("Access-Control-Allow-Origin", url.origin);
-      // Append to/Add Vary header so browser will cache response correctly
-      response.headers.append("Vary", "Origin");
+        let response = await fetch(request);
 
-      return response;
+        // Recreate the response so you can modify the headers
+        response = new Response(response.body, response);
+        // Set CORS headers
+        response.headers.set("Access-Control-Allow-Origin", url.origin);
+        // Append to/Add Vary header so browser will cache response correctly
+        response.headers.append("Vary", "Origin");
+
+        return response;
+      }
     }
 
     // else do IP geolocation
@@ -149,7 +153,7 @@ export default {
       return new Response(readable, {
         headers: myHeaders,
       });
-    } 
+    }
 
     // if the request does not match any of the above, return a 404 response
     console.log({ error: `"${url.pathname}" not found` });
