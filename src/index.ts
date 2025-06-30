@@ -128,12 +128,21 @@ export default {
         request = new Request(radarGifUrl, request);
         request.headers.set("Origin", new URL(radarGifUrl).origin);
 
-        let response = await fetch(request);
+        let response = await fetch(request, {
+          cf: {
+            // Always cache this fetch regardless of content type
+            // for a max of 5 seconds before revalidating the resource
+            cacheTtl: 5,
+            cacheEverything: true,
+          },
+        });
 
         // Recreate the response so you can modify the headers
         response = new Response(response.body, response);
         // Set CORS headers
         response.headers.set("Access-Control-Allow-Origin", url.origin);
+        // Set Cache-Control headers
+        response.headers.set("Cache-Control", "max-age=70");
         // Append to/Add Vary header so browser will cache response correctly
         response.headers.append("Vary", "Origin");
 
