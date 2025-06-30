@@ -13,7 +13,7 @@ import {
   userAgentIcon,
 } from "./utils.ts";
 
-export interface Env {
+interface Env {
   WAQI_TOKEN: string;
   NWS_AGENT: string;
   AIRNOW_KEY: string;
@@ -43,6 +43,7 @@ const user = {
   }),
   latitude: "40.712778", // default to NYC
   longitude: "-74.006111", // default to NYC
+  nonce: "", // nonce for CSP
 };
 
 // performance JSON object
@@ -56,7 +57,7 @@ const timing = {
 };
 
 // build HTML *******************************************************
-function renderHead(request: Request): string {
+function renderHead(): string {
   const start = performance.now();
 
   const hour = user.localizedDate.getHours();
@@ -81,19 +82,19 @@ function renderHead(request: Request): string {
   const html_head = `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>IP Geolocation 🌐 + Weather 🌦</title>
-    <meta charset="utf-8">
-    <meta name="description" content="IP Geolocation and Weather information">
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
-    <link rel="apple-touch-icon" href="/favicon.ico">
-    <link rel="preconnect" href="https://unpkg.com" />
+  <title>IP Geolocation 🌐 + Weather 🌦</title>
+  <meta charset="utf-8">
+  <meta name="description" content="IP Geolocation and Weather information">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="apple-touch-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://tiles.stadiamaps.com" />
-    <link rel="preconnect" href="https://radar.weather.gov" />
-    <script type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+  <link rel="preconnect" href="https://radar.weather.gov" />
+  <script nonce="${user.nonce}" type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    <style type="text/css"> ${html_style} </style>
+  <style type="text/css"> ${html_style} </style>
 </head>
 <body>
 <div id="container">`;
@@ -117,7 +118,7 @@ function renderGeolocation(request: Request): string {
   <p> City: ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf?.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf?.region}, RegionCode: ${request.cf?.regionCode}, PostalCode: ${request.cf?.postalCode}</p>
   <p> Country: ${request.cf?.country},  Continent: ${request.cf?.continent}</p>
-  <script type="text/javascript">
+  <script nonce="${user.nonce}" type="text/javascript">
     var map = new maplibregl.Map({
       container: 'map',
       style: 'https://tiles.stadiamaps.com/styles/outdoors.json',  // Style URL; see our documentation for more options
@@ -432,7 +433,6 @@ async function renderWeather(
 }
 
 async function renderForecast(
-  request: Request,
   env: Env,
   nwsPointsData: any,
   airnowSensorData: any
@@ -713,7 +713,7 @@ function renderFooter(
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
-<script> /* Script borrowed from https://www.w3schools.com/howto/howto_js_collapsible.asp */
+<script nonce="${user.nonce}"> /* Script borrowed from https://www.w3schools.com/howto/howto_js_collapsible.asp */
 var coll = document.getElementsByClassName("collapsible");
 var i;
 for (i = 0; i < coll.length; i++) {
@@ -739,10 +739,12 @@ for (i = 0; i < coll.length; i++) {
 export async function renderPage(
   writer: WritableStreamDefaultWriter,
   request: Request,
-  env: Env
+  env: Env,
+  nonce: string,
 ): Promise<void> {
   const start = performance.now();
 
+  // initialize user object
   user.timezone =
     typeof request.cf?.timezone === "string"
       ? request.cf.timezone
@@ -769,10 +771,11 @@ export async function renderPage(
     typeof request.cf?.longitude === "string"
       ? request.cf.longitude
       : "-74.006111"; // default to NYC
+  user.nonce = nonce;
 
   const encoder = new TextEncoder();
 
-  writer.write(encoder.encode(renderHead(request)));
+  writer.write(encoder.encode(renderHead()));
   writer.write(encoder.encode(renderGeolocation(request)));
 
   const [
@@ -789,7 +792,7 @@ export async function renderPage(
     nwsAlertRequestSuccess,
     nwsForecastRequestSuccess,
     airnowForecastRequestSuccess,
-  ] = await renderForecast(request, env, nwsPointsData, airnowSensorData);
+  ] = await renderForecast(env, nwsPointsData, airnowSensorData);
   writer.write(encoder.encode(forecastContent));
   writer.write(
     encoder.encode(

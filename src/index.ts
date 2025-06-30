@@ -20,6 +20,11 @@ export default {
     const WORKER_URLS = ["/"];
     const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
 
+    // Generate a new random nonce value for every response.
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    const nonce = btoa(String.fromCharCode(...array));
+
     // return static asset
     if (STATIC_URLS.includes(url.pathname)) {
       async function MethodNotAllowed(request: Request) {
@@ -60,8 +65,8 @@ export default {
 			  Secure your application with Content-Security-Policy headers.
 			  Enabling these headers will permit content from a trusted domain and all its subdomains.
 			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-			  "Content-Security-Policy": "default-src 'self' example.com *.example.com",
 			  */
+			  "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';`,
         /*
 			  You can also set Strict-Transport-Security headers.
 			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
@@ -83,8 +88,8 @@ export default {
 			  */
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Cross-Origin-Embedder-Policy": 'require-corp; report-to="default";',
-        "Cross-Origin-Opener-Policy": 'same-site; report-to="default";',
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-site",
         "Cross-Origin-Resource-Policy": "same-site",
         link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect, <https://radar.weather.gov>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
       });
@@ -107,7 +112,7 @@ export default {
         let { readable, writable } = new IdentityTransformStream();
 
         const writer = writable.getWriter();
-        ctx.waitUntil(renderPage(writer, request, env));
+        ctx.waitUntil(renderPage(writer, request, env, nonce));
 
         return new Response(readable, {
           headers: myHeaders,
