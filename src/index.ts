@@ -175,7 +175,7 @@ export default {
             image: {
               anim: true, // Enable animation for GIFs
               format: "webp", // Convert the image to WebP format
-              quality: 75, // Set the quality for the WebP image
+              quality: 65, // Set the quality for the WebP image
             },
           },
         });
@@ -188,7 +188,6 @@ export default {
             response.headers.get("content-length") || "0"
           );
           imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
-          console.log(imgProxyLog);
         } else {
           // If the image transform fails, log the error. Fetch the original image
           imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
@@ -205,7 +204,6 @@ export default {
           imgProxyLog.contentLength = parseInt(
             response.headers.get("content-length") || "0"
           );
-          console.log(imgProxyLog);
         }
 
         // Recreate the response so you can modify the headers
@@ -216,7 +214,8 @@ export default {
         response.headers.set("Cache-Control", "max-age=70");
         // Append to/Add Vary header so browser will cache response correctly
         response.headers.append("Vary", "Origin");
-
+        
+        console.log(imgProxyLog);
         return response;
       }
     }
