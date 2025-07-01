@@ -175,7 +175,7 @@ export default {
             image: {
               anim: true, // Enable animation for GIFs
               format: "webp", // Convert the image to WebP format
-              quality: 65, // Set the quality for the WebP image
+              quality: 70, // Set the quality for the WebP image
             },
           },
         });
