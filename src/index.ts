@@ -130,12 +130,28 @@ export default {
 
         let response = await fetch(request, {
           cf: {
+            // Image transform object
+            image: {
+              anim: true, // Enable animation for GIFs
+              format: "webp", // Convert the image to WebP format
+            },
             // Always cache this fetch regardless of content type
             // for a max of 5 seconds before revalidating the resource
             cacheTtl: 5,
             cacheEverything: true,
           },
         });
+        // If the response is not ok, fetch original image
+        if (!response.ok && !response.redirected) {
+          response = await fetch(request, {
+            cf: {
+              // Always cache this fetch regardless of content type
+              // for a max of 5 seconds before revalidating the resource
+              cacheTtl: 5,
+              cacheEverything: true,
+            },
+          });
+        }
 
         // Recreate the response so you can modify the headers
         response = new Response(response.body, response);

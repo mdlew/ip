@@ -2,7 +2,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "ip"
 main = "src/index.ts"
-compatibility_date = "2025-06-15"
+compatibility_date = "2025-07-01"
 
 [assets]
 directory = "./public"
@@ -10,6 +10,9 @@ binding = "ASSETS"
 run_worker_first = false
 html_handling = "auto-trailing-slash"
 not_found_handling = "none"
+
+[images]
+binding = "IMAGES"
 
 # [site]
 # bucket = "./public"
