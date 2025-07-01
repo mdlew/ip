@@ -7,6 +7,14 @@ export interface Env {
   ASSETS: Fetcher; // Add ASSETS property to the Env interface
 }
 
+const imageProxy = {
+  message: "",
+  radarId: "",
+  cf_resized: "",
+  contentType: "",
+  contentLength: 0,
+};
+
 async function MethodNotAllowed(request: Request) {
   console.log({ error: `Method ${request.method} not allowed` });
   return new Response(`Method ${request.method} not allowed.`, {
@@ -127,6 +135,7 @@ export default {
         // that this request is not cross-site.
         request = new Request(radarGifUrl, request);
         request.headers.set("Origin", new URL(radarGifUrl).origin);
+        imageProxy.radarId = radarId.toUpperCase();
 
         let response = await fetch(request, {
           cf: {
@@ -137,11 +146,13 @@ export default {
             },
           },
         });
-        // If the response is not ok, fetch original image
+        // Log successful image transform
         if (response.ok || response.redirected) {
-          console.log({
-            message: `Radar image for "${radarId}" fetched successfully.`,
-          });
+          imageProxy.message = `Radar image for "${radarId}" transformed successfully.`;
+          imageProxy.contentType = response.headers.get("content-type") || "";
+          imageProxy.contentLength = parseInt(response.headers.get("content-length") || "0");
+          imageProxy.cf_resized = response.headers.get("cf-resized") || "";
+          console.log(imageProxy);
         } else {
           response = await fetch(request, {
             cf: {
@@ -151,9 +162,10 @@ export default {
               cacheEverything: true,
             },
           });
-          console.log({
-            error: `Image transform for "${radarId}" failed, using original image.`,
-          });
+          imageProxy.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
+          imageProxy.contentType = response.headers.get("content-type") || ""; 
+          imageProxy.contentLength = parseInt(response.headers.get("content-length") || "0");
+          console.log(imageProxy);
         }
 
         // Recreate the response so you can modify the headers
