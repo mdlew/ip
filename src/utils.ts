@@ -1,3 +1,27 @@
+/**
+ * @file utils.ts
+ * @description This file contains utility functions and constants used throughout the application.
+ *              These include helper functions for API requests, geolocation conversions, gradient
+ *              generation, and various emoji mappings for data visualization.
+ * 
+ * @author Matthew Lew
+ * @date July 1, 2025
+ * 
+ * @exports
+ * - fetchProducts: Helper function for making API requests with timeout and abort support.
+ * - lat2y, lon2x: Functions for converting latitude and longitude to Web Mercator coordinates.
+ * - toCSSGradient: Converts an hour to a CSS linear gradient string.
+ * - statusEmoji: Maps fetch success status to an emoji.
+ * - aqiToEmoji, aqiCategoryToEmoji: Maps AQI values and categories to emojis.
+ * - nwsForecastIconToEmoji: Maps NWS forecast icons to emojis.
+ * - nwsAlertSeverityToEmoji, nwsAlertResponseToEmoji, nwsAlertEventToEmoji: Maps NWS alert data to emojis.
+ * - userAgentIcon: Maps user agent strings to emojis.
+ * 
+ * @constants
+ * - fetchTimeout: Maximum time (in milliseconds) to wait for an API response.
+ * - grads: Array of gradient data for background color generation.
+ */
+
 // The `fetchTimeout` constant defines the maximum time (in milliseconds) to wait for a response from an API request.
 // A value of 3000ms (3 seconds) was chosen as a balance between user experience and network latency,
 // ensuring that the application does not hang indefinitely while waiting for a response.

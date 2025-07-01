@@ -1,3 +1,35 @@
+/**
+ * @file index.ts
+ * @description This file serves as the entry point for the Cloudflare Worker application. It handles
+ *              incoming HTTP requests, processes them based on their URL paths, and returns appropriate
+ *              responses. The application supports static asset delivery, radar image proxying, and
+ *              IP geolocation with weather data rendering.
+ * 
+ * @author Matthew Lew
+ * @date July 1, 2025
+ * 
+ * @exports
+ * - Default export: The main fetch handler for the Cloudflare Worker.
+ * 
+ * @interfaces
+ * - Env: Defines the environment variables required for API integrations and asset fetching.
+ * 
+ * @constants
+ * - STATIC_URLS: Array of paths for static assets.
+ * - RADAR_PROXY_URL: Path for radar image proxy requests.
+ * - WORKER_URL: Path for the main IP geolocation and weather rendering.
+ * 
+ * @functions
+ * - MethodNotAllowed: Returns a 405 response for unsupported HTTP methods.
+ * - fetch: Main handler function for processing incoming requests.
+ * 
+ * @features
+ * - Implements security headers such as Content-Security-Policy, X-Frame-Options, and more.
+ * - Proxies radar images with optional image transformation to WebP format.
+ * - Serves static assets from the ASSETS binding.
+ * - Renders an HTML page with IP geolocation and weather data using the `renderPage` function.
+ */
+
 import { renderPage } from "./ssr.js";
 
 export interface Env {

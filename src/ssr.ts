@@ -1,3 +1,32 @@
+/**
+ * @file ssr.ts
+ * @description This file contains server-side rendering (SSR) logic for generating an HTML page
+ *              that displays IP geolocation, weather, and air quality information. It integrates
+ *              with multiple APIs, including WAQI, NWS, and AirNow, to fetch and display data.
+ * 
+ * @author Matthew Lew
+ * @date July 1, 2025
+ * 
+ * @exports renderPage - Main function to render the HTML page.
+ * 
+ * @dependencies
+ * - Intl.NumberFormat: For formatting numbers.
+ * - Intl.DateTimeFormat: For formatting dates and times.
+ * - fetchProducts: Utility function for making API requests.
+ * - Various utility functions for formatting and rendering data.
+ * 
+ * @interfaces
+ * - Env: Defines the environment variables required for API integrations.
+ * 
+ * @functions
+ * - renderHead: Generates the HTML head section.
+ * - renderGeolocation: Generates the geolocation section of the page.
+ * - renderWeather: Fetches and renders weather and air quality data.
+ * - renderForecast: Fetches and renders forecast data.
+ * - renderFooter: Generates the footer section of the page.
+ * - renderPage: Main function to orchestrate the rendering process.
+ */
+
 import {
   aqiCategoryToEmoji,
   aqiToEmoji,
@@ -48,6 +77,7 @@ const user = {
 
 // performance JSON object
 const timing = {
+  message: "",
   renderHead: NaN,
   renderGeolocation: NaN,
   renderWeather: NaN,
@@ -811,6 +841,7 @@ export async function renderPage(
 
   // log performance
   timing.renderTotal = performance.now() - start;
+  timing.message = "Rendered page in " + timing.renderTotal + " ms.";
   console.log(timing);
 
   return writer.close();
