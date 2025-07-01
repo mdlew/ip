@@ -4,25 +4,25 @@
  *              incoming HTTP requests, processes them based on their URL paths, and returns appropriate
  *              responses. The application supports static asset delivery, radar image proxying, and
  *              IP geolocation with weather data rendering.
- * 
+ *
  * @author Matthew Lew
  * @date July 1, 2025
- * 
+ *
  * @exports
  * - Default export: The main fetch handler for the Cloudflare Worker.
- * 
+ *
  * @interfaces
  * - Env: Defines the environment variables required for API integrations and asset fetching.
- * 
+ *
  * @constants
  * - STATIC_URLS: Array of paths for static assets.
  * - RADAR_PROXY_URL: Path for radar image proxy requests.
  * - WORKER_URL: Path for the main IP geolocation and weather rendering.
- * 
+ *
  * @functions
  * - MethodNotAllowed: Returns a 405 response for unsupported HTTP methods.
  * - fetch: Main handler function for processing incoming requests.
- * 
+ *
  * @features
  * - Implements security headers such as Content-Security-Policy, X-Frame-Options, and more.
  * - Proxies radar images with optional image transformation to WebP format.
@@ -39,7 +39,7 @@ export interface Env {
   ASSETS: Fetcher; // Add ASSETS property to the Env interface
 }
 
-const imageProxy = {
+const imgProxyLog = {
   message: "",
   radarId: "",
   cf_resized: "",
@@ -167,7 +167,7 @@ export default {
         // that this request is not cross-site.
         request = new Request(radarGifUrl, request);
         request.headers.set("Origin", new URL(radarGifUrl).origin);
-        imageProxy.radarId = radarId.toUpperCase();
+        imgProxyLog.radarId = radarId.toUpperCase();
 
         let response = await fetch(request, {
           cf: {
@@ -175,20 +175,23 @@ export default {
             image: {
               anim: true, // Enable animation for GIFs
               format: "webp", // Convert the image to WebP format
+              quality: 75, // Set the quality for the WebP image
             },
           },
         });
-        
+
         if (response.ok || response.redirected) {
           // Log successful image transform
-          imageProxy.message = `Radar image for "${radarId}" transformed successfully.`;
-          imageProxy.contentType = response.headers.get("content-type") || "";
-          imageProxy.contentLength = parseInt(response.headers.get("content-length") || "0");
-          imageProxy.cf_resized = response.headers.get("cf-resized") || "";
-          console.log(imageProxy);
+          imgProxyLog.message = `Radar image for "${radarId}" transformed successfully.`;
+          imgProxyLog.contentType = response.headers.get("content-type") || "";
+          imgProxyLog.contentLength = parseInt(
+            response.headers.get("content-length") || "0"
+          );
+          imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
+          console.log(imgProxyLog);
         } else {
           // If the image transform fails, log the error. Fetch the original image
-          imageProxy.cf_resized = response.headers.get("cf-resized") || "";
+          imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
           response = await fetch(request, {
             cf: {
               // Always cache this fetch regardless of content type
@@ -197,10 +200,12 @@ export default {
               cacheEverything: true,
             },
           });
-          imageProxy.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
-          imageProxy.contentType = response.headers.get("content-type") || ""; 
-          imageProxy.contentLength = parseInt(response.headers.get("content-length") || "0");
-          console.log(imageProxy);
+          imgProxyLog.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
+          imgProxyLog.contentType = response.headers.get("content-type") || "";
+          imgProxyLog.contentLength = parseInt(
+            response.headers.get("content-length") || "0"
+          );
+          console.log(imgProxyLog);
         }
 
         // Recreate the response so you can modify the headers

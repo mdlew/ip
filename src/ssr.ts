@@ -76,7 +76,7 @@ const user = {
 };
 
 // performance JSON object
-const timing = {
+const timingLog = {
   message: "",
   renderHead: NaN,
   renderGeolocation: NaN,
@@ -128,7 +128,7 @@ function renderHead(): string {
 <body>
 <div id="container">`;
 
-  timing.renderHead = performance.now() - start;
+  timingLog.renderHead = performance.now() - start;
   return html_head;
 }
 
@@ -168,7 +168,7 @@ function renderGeolocation(request: Request): string {
       .addTo(map);
   </script>`;
 
-  timing.renderGeolocation = performance.now() - start;
+  timingLog.renderGeolocation = performance.now() - start;
   return html_content;
 }
 
@@ -450,7 +450,7 @@ async function renderWeather(
   }
   // html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${user.latitude}&longitude=${user.longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
-  timing.renderWeather = performance.now() - start;
+  timingLog.renderWeather = performance.now() - start;
   return [
     html_content,
     nwsPointsData,
@@ -691,7 +691,7 @@ async function renderForecast(
     }
   }
 
-  timing.renderForecast = performance.now() - start;
+  timingLog.renderForecast = performance.now() - start;
   return [
     html_content,
     nwsAlertRequestSuccess,
@@ -724,10 +724,10 @@ function renderFooter(
 </div>
 <footer>
   <p> Page generated on ${user.dateFormat.format(new Date())} in ${
-    timing.renderHead +
-    timing.renderGeolocation +
-    timing.renderWeather +
-    timing.renderForecast +
+    timingLog.renderHead +
+    timingLog.renderGeolocation +
+    timingLog.renderWeather +
+    timingLog.renderForecast +
     performance.now() -
     start
   } ms. NWS location ${statusEmoji(nwsPointsSuccess)}. NWS alert ${statusEmoji(
@@ -762,7 +762,7 @@ for (i = 0; i < coll.length; i++) {
 </body>
 </html>`;
 
-  timing.renderFooter = performance.now() - start;
+  timingLog.renderFooter = performance.now() - start;
   return html_footer;
 }
 
@@ -840,9 +840,9 @@ export async function renderPage(
   );
 
   // log performance
-  timing.renderTotal = performance.now() - start;
-  timing.message = "Rendered page in " + timing.renderTotal + " ms.";
-  console.log(timing);
+  timingLog.renderTotal = performance.now() - start;
+  timingLog.message = "Rendered page in " + timingLog.renderTotal + " ms.";
+  console.log(timingLog);
 
   return writer.close();
 }
