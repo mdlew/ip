@@ -179,18 +179,14 @@ export default {
             },
           },
         });
+        imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
 
         if (response.ok || response.redirected) {
           // Log successful image transform
           imgProxyLog.message = `Radar image for "${radarId}" transformed successfully.`;
-          imgProxyLog.contentType = response.headers.get("content-type") || "";
-          imgProxyLog.contentLength = parseInt(
-            response.headers.get("content-length") || "0"
-          );
-          imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
         } else {
           // If the image transform fails, log the error. Fetch the original image
-          imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
+          imgProxyLog.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
           response = await fetch(request, {
             cf: {
               // Always cache this fetch regardless of content type
@@ -199,11 +195,6 @@ export default {
               cacheEverything: true,
             },
           });
-          imgProxyLog.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
-          imgProxyLog.contentType = response.headers.get("content-type") || "";
-          imgProxyLog.contentLength = parseInt(
-            response.headers.get("content-length") || "0"
-          );
         }
 
         // Recreate the response so you can modify the headers
@@ -214,7 +205,11 @@ export default {
         response.headers.set("Cache-Control", "max-age=70");
         // Append to/Add Vary header so browser will cache response correctly
         response.headers.append("Vary", "Origin");
-        
+
+        imgProxyLog.contentType = response.headers.get("content-type") || "";
+        imgProxyLog.contentLength = parseInt(
+          response.headers.get("content-length") || "0"
+        );
         console.log(imgProxyLog);
         return response;
       }
