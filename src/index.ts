@@ -135,14 +135,14 @@ export default {
               anim: true, // Enable animation for GIFs
               format: "webp", // Convert the image to WebP format
             },
-            // Always cache this fetch regardless of content type
-            // for a max of 5 seconds before revalidating the resource
-            cacheTtl: 5,
-            cacheEverything: true,
           },
         });
         // If the response is not ok, fetch original image
-        if (!response.ok && !response.redirected) {
+        if (response.ok || response.redirected) {
+          console.log({
+            message: `Radar image for "${radarId}" fetched successfully.`,
+          });
+        } else {
           response = await fetch(request, {
             cf: {
               // Always cache this fetch regardless of content type
@@ -150,6 +150,9 @@ export default {
               cacheTtl: 5,
               cacheEverything: true,
             },
+          });
+          console.log({
+            error: `Image transform for "${radarId}" failed, using original image.`,
           });
         }
 
