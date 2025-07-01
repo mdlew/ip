@@ -146,14 +146,17 @@ export default {
             },
           },
         });
-        // Log successful image transform
+        
         if (response.ok || response.redirected) {
+          // Log successful image transform
           imageProxy.message = `Radar image for "${radarId}" transformed successfully.`;
           imageProxy.contentType = response.headers.get("content-type") || "";
           imageProxy.contentLength = parseInt(response.headers.get("content-length") || "0");
           imageProxy.cf_resized = response.headers.get("cf-resized") || "";
           console.log(imageProxy);
         } else {
+          // If the image transform fails, log the error. Fetch the original image
+          imageProxy.cf_resized = response.headers.get("cf-resized") || "";
           response = await fetch(request, {
             cf: {
               // Always cache this fetch regardless of content type
