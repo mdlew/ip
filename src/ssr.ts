@@ -3,21 +3,21 @@
  * @description This file contains server-side rendering (SSR) logic for generating an HTML page
  *              that displays IP geolocation, weather, and air quality information. It integrates
  *              with multiple APIs, including WAQI, NWS, and AirNow, to fetch and display data.
- * 
+ *
  * @author Matthew Lew
  * @date July 1, 2025
- * 
+ *
  * @exports renderPage - Main function to render the HTML page.
- * 
+ *
  * @dependencies
  * - Intl.NumberFormat: For formatting numbers.
  * - Intl.DateTimeFormat: For formatting dates and times.
  * - fetchProducts: Utility function for making API requests.
  * - Various utility functions for formatting and rendering data.
- * 
+ *
  * @interfaces
  * - Env: Defines the environment variables required for API integrations.
- * 
+ *
  * @functions
  * - renderHead: Generates the HTML head section.
  * - renderGeolocation: Generates the geolocation section of the page.
@@ -98,7 +98,25 @@ function renderHead(): string {
     textColor = "black";
   }
 
-  const html_style = `body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
+  const html_style = `@font-face {
+  font-family: "Source Sans 3";
+  src:
+    local("Source Sans 3"), local("Source Sans Pro"),
+    url("/SourceSans3-Regular.otf.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+ }
+ @font-face {
+  font-family: "Source Sans 3";
+  src:
+    local("Source Sans 3"), local("Source Sans Pro"),
+    url("/SourceSans3-Bold.otf.woff2") format("woff2");
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+ }
+ body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
  footer { padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
  #container{display: flex; flex-direction:column;min-height: 100%;}
  body{background: ${toCSSGradient(
@@ -122,7 +140,6 @@ function renderHead(): string {
   <link rel="preconnect" href="https://tiles.stadiamaps.com" />
   <script nonce="${user.nonce}" type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   <style type="text/css"> ${html_style} </style>
 </head>
 <body>

@@ -68,7 +68,7 @@ export default {
     // Return a new Response based on a URL's pathname
 
     // Define static URLs and worker URLs
-    const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt"];
+    const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt", "/SourceSans3-Regular.otf.woff2", "/SourceSans3-Bold.otf.woff2"];
     const RADAR_PROXY_URL = "/radarproxy/";
     const WORKER_URL = "/";
     const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
@@ -111,7 +111,7 @@ export default {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Resource-Policy": "same-site",
       "Cross-Origin-Embedder-Policy": "require-corp",
-      link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect, <https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,400;1,700&display=swap>; rel=preload; as=style",
+      link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect",
     });
 
     // Check if the request is secure (HTTPS) and TLS version is 1.2 or higher, return 403 if not
