@@ -121,7 +121,7 @@ function renderHead(): string {
  #container{display: flex; flex-direction:column;min-height: 100%;}
  body{background: ${toCSSGradient(
    hour
- )};} h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}
+ )};} h1, h2, h3 {color: ${accentColor}; font-weight: bold;} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}
  .collapsible {  background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none; }
  .active, .collapsible:hover {  background-color: #59230B;}
  .collapsible:after {  content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {  content: '➖';}
