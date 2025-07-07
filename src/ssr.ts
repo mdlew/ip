@@ -140,7 +140,7 @@ function renderHead(): string {
   <link rel="preconnect" href="https://tiles.stadiamaps.com" />
   <script nonce="${user.nonce}" type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
-  <style type="text/css"> ${html_style} </style>
+  <style nonce="${user.nonce}" type="text/css"> ${html_style} </style>
 </head>
 <body>
 <div id="container">`;
