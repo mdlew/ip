@@ -202,7 +202,7 @@ export default {
         // Set CORS headers
         response.headers.set("Access-Control-Allow-Origin", url.origin);
         // Set Cache-Control headers
-        response.headers.set("Cache-Control", "max-age=70");
+        response.headers.set("Cache-Control", "max-age=60, must-revalidate");
         // Append to/Add Vary header so browser will cache response correctly
         response.headers.append("Vary", "Origin");
 
