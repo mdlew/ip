@@ -444,9 +444,9 @@ async function renderWeather(
     !(waqiData == undefined) ? waqiData.iaqi.co?.v : undefined
   )} ${!(waqiData == undefined) ? waqiData.iaqi.co?.v + " AQI" : "N/A"}</p>`;
 
-  // add NWS radar loop if available
+  // add NWS radar loop if available, change URL every 2 minutes to avoid caching
   if (!(nwsPointsData == undefined)) {
-    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="/radarproxy/?id=${nwsPointsData?.radarStation}" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="/radarproxy/?id=${nwsPointsData?.radarStation}&refreshed=${Math.round(Date.now()/120000)}" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
   }
 
   if (!(waqiData == undefined)) {
