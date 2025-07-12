@@ -111,6 +111,7 @@ export default {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Resource-Policy": "same-site",
       "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
       link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect",
     });
 
