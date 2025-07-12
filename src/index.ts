@@ -68,7 +68,13 @@ export default {
     // Return a new Response based on a URL's pathname
 
     // Define static URLs and worker URLs
-    const STATIC_URLS = ["/favicon.ico", "/favicon.svg", "/robots.txt", "/SourceSans3-Regular.otf.woff2", "/SourceSans3-Bold.otf.woff2"];
+    const STATIC_URLS = [
+      "/favicon.ico",
+      "/favicon.svg",
+      "/robots.txt",
+      "/SourceSans3-Regular.otf.woff2",
+      "/SourceSans3-Bold.otf.woff2",
+    ];
     const RADAR_PROXY_URL = "/radarproxy/";
     const WORKER_URL = "/";
     const url = new URL(request.url); // URL is available in the global scope of Cloudflare Workers
@@ -157,10 +163,15 @@ export default {
     }
 
     // return radar proxy if the request matches a valid radar proxy URL
-    if (RADAR_PROXY_URL == url.pathname) {
+    if (
+      RADAR_PROXY_URL == url.pathname &&
+      url.searchParams.get("id") &&
+      url.searchParams.get("refreshed")
+    ) {
       const radarId = url.searchParams.get("id");
+      const cacheKey = url.searchParams.get("refreshed");
 
-      if (radarId && radarId.length == 4) {
+      if (radarId && radarId.length == 4 && cacheKey) {
         const radarGifUrl = `https://radar.weather.gov/ridge/standard/${radarId.toUpperCase()}_loop.gif`;
 
         // Rewrite request to point to radar URL. This also makes the request mutable
@@ -178,6 +189,8 @@ export default {
               format: "webp", // Convert the image to WebP format
               quality: 70, // Set the quality for the WebP image
             },
+            cacheEverything: true, // Cache the response regardless of content type
+            cacheKey: cacheKey, // Use the cacheKey from the URL to cache the response
           },
         });
         imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
@@ -190,10 +203,8 @@ export default {
           imgProxyLog.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
           response = await fetch(request, {
             cf: {
-              // Always cache this fetch regardless of content type
-              // for a max of 5 seconds before revalidating the resource
-              cacheTtl: 5,
-              cacheEverything: true,
+              cacheEverything: true, // Cache the response regardless of content type
+              cacheKey: cacheKey, // Use the cacheKey from the URL to cache the response
             },
           });
         }
@@ -203,7 +214,10 @@ export default {
         // Set CORS headers
         response.headers.set("Access-Control-Allow-Origin", url.origin);
         // Set Cache-Control headers, okay to cache for 1 year because URL refreshes every 2 minutes
-        response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.headers.set(
+          "Cache-Control",
+          "public, max-age=31536000, immutable"
+        );
         // Append to/Add Vary header so browser will cache response correctly
         response.headers.append("Vary", "Origin");
 
