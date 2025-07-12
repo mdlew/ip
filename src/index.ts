@@ -203,7 +203,7 @@ export default {
         // Set CORS headers
         response.headers.set("Access-Control-Allow-Origin", url.origin);
         // Set Cache-Control headers, okay to cache for 1 year because URL refreshes every 2 minutes
-        response.headers.set("Cache-Control", "max-age=31536000, immutable");
+        response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
         // Append to/Add Vary header so browser will cache response correctly
         response.headers.append("Vary", "Origin");
 
