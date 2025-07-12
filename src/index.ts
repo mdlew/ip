@@ -166,68 +166,58 @@ export default {
     if (
       RADAR_PROXY_URL == url.pathname &&
       url.searchParams.get("id") &&
-      url.searchParams.get("refreshed")
+      url.searchParams.get("refreshed") &&
+      url.searchParams.get("id")?.length == 4
     ) {
-      const radarId = url.searchParams.get("id");
-      const cacheKey = url.searchParams.get("refreshed");
+      const radarId = url.searchParams.get("id")?.toUpperCase() || "";
+      const cacheKey = url.searchParams.get("refreshed"); // cache feature not enabled for free users
 
-      if (radarId && radarId.length == 4 && cacheKey) {
-        const radarGifUrl = `https://radar.weather.gov/ridge/standard/${radarId.toUpperCase()}_loop.gif`;
+      const radarGifUrl = `https://radar.weather.gov/ridge/standard/${radarId}_loop.gif`;
 
-        // Rewrite request to point to radar URL. This also makes the request mutable
-        // so you can add the correct Origin header to make the API server think
-        // that this request is not cross-site.
-        request = new Request(radarGifUrl, request);
-        request.headers.set("Origin", new URL(radarGifUrl).origin);
-        imgProxyLog.radarId = radarId.toUpperCase();
+      // Rewrite request to point to radar URL. This also makes the request mutable
+      // so you can add the correct Origin header to make the API server think
+      // that this request is not cross-site.
+      request = new Request(radarGifUrl, request);
+      request.headers.set("Origin", new URL(radarGifUrl).origin);
+      imgProxyLog.radarId = radarId;
 
-        let response = await fetch(request, {
-          cf: {
-            // Image transform object
-            image: {
-              anim: true, // Enable animation for GIFs
-              format: "webp", // Convert the image to WebP format
-              quality: 70, // Set the quality for the WebP image
-            },
-            cacheEverything: true, // Cache the response regardless of content type
-            cacheKey: cacheKey, // Use the cacheKey from the URL to cache the response
+      let response = await fetch(request, {
+        cf: {
+          // Image transform object
+          image: {
+            anim: true, // Enable animation for GIFs
+            format: "webp", // Convert the image to WebP format
+            quality: 70, // Set the quality for the WebP image
           },
-        });
-        imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
+        },
+        cache: "no-store", // Do not cache the response
+      });
+      imgProxyLog.cf_resized = response.headers.get("cf-resized") || "";
 
-        if (response.ok || response.redirected) {
-          // Log successful image transform
-          imgProxyLog.message = `Radar image for "${radarId}" transformed successfully.`;
-        } else {
-          // If the image transform fails, log the error. Fetch the original image
-          imgProxyLog.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
-          response = await fetch(request, {
-            cf: {
-              cacheEverything: true, // Cache the response regardless of content type
-              cacheKey: cacheKey, // Use the cacheKey from the URL to cache the response
-            },
-          });
-        }
-
-        // Recreate the response so you can modify the headers
-        response = new Response(response.body, response);
-        // Set CORS headers
-        response.headers.set("Access-Control-Allow-Origin", url.origin);
-        // Set Cache-Control headers, okay to cache for 1 year because URL refreshes every 2 minutes
-        response.headers.set(
-          "Cache-Control",
-          "public, max-age=31536000, immutable"
-        );
-        // Append to/Add Vary header so browser will cache response correctly
-        response.headers.append("Vary", "Origin");
-
-        imgProxyLog.contentType = response.headers.get("content-type") || "";
-        imgProxyLog.contentLength = parseInt(
-          response.headers.get("content-length") || "0"
-        );
-        console.log(imgProxyLog);
-        return response;
+      if (response.ok || response.redirected) {
+        // Log successful image transform
+        imgProxyLog.message = `Radar image for "${radarId}" transformed successfully.`;
+      } else {
+        // If the image transform fails, log the error. Fetch the original image
+        imgProxyLog.message = `Radar image transform for "${radarId}" failed. Falling back to original image.`;
+        response = await fetch(request, { cache: "no-store" });
       }
+
+      // Recreate the response so you can modify the headers
+      response = new Response(response.body, response);
+      // Set CORS headers
+      response.headers.set("Access-Control-Allow-Origin", url.origin);
+      // Set Cache-Control headers, okay to cache for 1 year because URL refreshes every 2 minutes
+      response.headers.set("Cache-Control", "max-age=75"); // 75 seconds
+      // Append to/Add Vary header so browser will cache response correctly
+      response.headers.append("Vary", "Origin");
+
+      imgProxyLog.contentType = response.headers.get("content-type") || "";
+      imgProxyLog.contentLength = parseInt(
+        response.headers.get("content-length") || "0"
+      );
+      console.log(imgProxyLog);
+      return response;
     }
 
     // else do IP geolocation
