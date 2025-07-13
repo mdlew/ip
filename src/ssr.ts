@@ -30,6 +30,9 @@
 import {
   aqiCategoryToEmoji,
   aqiToEmoji,
+  calcDewPointF,
+  calcHeatIndex,
+  dewPointEmoji,
   fetchProducts,
   lat2y,
   lon2x,
@@ -315,35 +318,15 @@ async function renderWeather(
   }
 
   // temperature data
-  const tempF = !(waqiData == undefined)
-    ? (parseFloat(waqiData.iaqi.t?.v) * 9) / 5 + 32
-    : NaN; //deg C to deg F
+  const tempC = !(waqiData == undefined) ? parseFloat(waqiData.iaqi.t?.v) : NaN;
+  const tempF = (tempC * 9.0) / 5.0 + 32.0; // convert to Fahrenheit
   const humidity = !(waqiData == undefined) ? waqiData.iaqi.h?.v : NaN;
+  const dewPointF = calcDewPointF(tempC, humidity);
   const windSpeed = !(waqiData == undefined)
     ? parseFloat(waqiData.iaqi.w?.v) * 2.23694
     : NaN; // m/s to mph
   // compute heat index if it's warm enough
-  let heatIndex =
-    0.5 * (tempF + 61.0 + (tempF - 68.0) * 1.2 + humidity * 0.094);
-  if ((tempF + heatIndex) / 2 > 80) {
-    heatIndex =
-      -42.379 +
-      2.04901523 * tempF +
-      10.14333127 * humidity -
-      0.22475541 * tempF * humidity -
-      0.00683783 * tempF * tempF -
-      0.05481717 * humidity * humidity +
-      0.00122874 * tempF * tempF * humidity +
-      0.00085282 * tempF * humidity * humidity -
-      0.00000199 * tempF * tempF * humidity * humidity;
-    if (humidity < 13 && tempF > 80 && tempF < 112) {
-      heatIndex -=
-        ((13 - humidity) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17); // low humidity correction
-    }
-    if (humidity > 85 && tempF > 80 && tempF < 87) {
-      heatIndex += ((humidity - 85) / 10) * ((87 - tempF) / 5); // high humidity correction
-    }
-  }
+  const heatIndex = calcHeatIndex(tempF, humidity);
   // compute wind chill
   const windChill =
     35.74 +
@@ -372,7 +355,9 @@ async function renderWeather(
     )} °F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
   }
 
-  html_content += `<p> Relative humidity: ${humidity}&percnt;</p>`;
+  html_content += `<p> Relative humidity: ${dewPointEmoji(
+    dewPointF
+  )} ${humidity}&percnt;, Dew point: ${floatFormat.format(dewPointF)} °F</p>`;
   html_content += `<p> Wind speed: ${floatFormat.format(windSpeed)} mph</p>`;
 
   // air quality data
@@ -446,7 +431,13 @@ async function renderWeather(
 
   // add NWS radar loop if available, change URL every 2 minutes to avoid caching
   if (!(nwsPointsData == undefined)) {
-    html_content += `<p> <a href="https://radar.weather.gov/station/${nwsPointsData?.radarStation}/standard"><img loading="lazy" src="/radarproxy/?id=${nwsPointsData?.radarStation}&refreshed=${Math.round(Date.now()/120000)}" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+    html_content += `<p> <a href="https://radar.weather.gov/station/${
+      nwsPointsData?.radarStation
+    }/standard"><img loading="lazy" src="/radarproxy/?id=${
+      nwsPointsData?.radarStation
+    }&refreshed=${Math.round(
+      Date.now() / 120000
+    )}" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
   }
 
   if (!(waqiData == undefined)) {

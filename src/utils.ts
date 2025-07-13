@@ -3,10 +3,10 @@
  * @description This file contains utility functions and constants used throughout the application.
  *              These include helper functions for API requests, geolocation conversions, gradient
  *              generation, and various emoji mappings for data visualization.
- * 
+ *
  * @author Matthew Lew
  * @date July 1, 2025
- * 
+ *
  * @exports
  * - fetchProducts: Helper function for making API requests with timeout and abort support.
  * - lat2y, lon2x: Functions for converting latitude and longitude to Web Mercator coordinates.
@@ -16,7 +16,7 @@
  * - nwsForecastIconToEmoji: Maps NWS forecast icons to emojis.
  * - nwsAlertSeverityToEmoji, nwsAlertResponseToEmoji, nwsAlertEventToEmoji: Maps NWS alert data to emojis.
  * - userAgentIcon: Maps user agent strings to emojis.
- * 
+ *
  * @constants
  * - fetchTimeout: Maximum time (in milliseconds) to wait for an API response.
  * - grads: Array of gradient data for background color generation.
@@ -214,6 +214,59 @@ export function toCSSGradient(hour: number): string {
     if (i < len - 1) css += ",";
   }
   return css + ")";
+}
+
+export function calcHeatIndex(tempF: number, humidity: number): number {
+  // Calculate the heat index using the formula
+  let heatIndex =
+    0.5 * (tempF + 61.0 + (tempF - 68.0) * 1.2 + humidity * 0.094);
+  if ((tempF + heatIndex) / 2 > 80) {
+    heatIndex =
+      -42.379 +
+      2.04901523 * tempF +
+      10.14333127 * humidity -
+      0.22475541 * tempF * humidity -
+      0.00683783 * tempF * tempF -
+      0.05481717 * humidity * humidity +
+      0.00122874 * tempF * tempF * humidity +
+      0.00085282 * tempF * humidity * humidity -
+      0.00000199 * tempF * tempF * humidity * humidity;
+    if (humidity < 13 && tempF > 80 && tempF < 112) {
+      heatIndex -=
+        ((13 - humidity) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17); // low humidity correction
+    }
+    if (humidity > 85 && tempF > 80 && tempF < 87) {
+      heatIndex += ((humidity - 85) / 10) * ((87 - tempF) / 5); // high humidity correction
+    }
+  }
+  return heatIndex;
+}
+
+export function calcDewPointF(tempC: number, humidity: number): number {
+  // Calculate the dew point using the formula from https://en.wikipedia.org/wiki/Dew_point#Calculating_the_dew_point
+  const b = 17.62;
+  const c = 243.12; // degrees Celsius
+  const d = 234.5; // degrees Celsius
+  const gamma_m =
+    Math.log(humidity / 100) *
+    Math.exp((b - tempC / d) * (tempC / (c + tempC)));
+  return ((c * gamma_m) / (b - gamma_m)) * (9 / 5) + 32; // Convert to Fahrenheit
+}
+
+export function dewPointEmoji(dewPointF: number): string {
+  if (isNaN(dewPointF)) {
+    return "";
+  } else if (dewPointF < 30) {
+    return "🟠"; // Dry
+  } else if (dewPointF < 55) {
+    return "🟢"; // Comfortable
+  } else if (dewPointF < 65) {
+    return "🟡"; // Moderate
+  } else if (dewPointF < 70) {
+    return "🟠"; // Uncomfortable
+  } else {
+    return "🔴"; // Oppressive
+  }
 }
 
 export function statusEmoji(fetchSuccess: boolean): string {
