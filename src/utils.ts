@@ -243,14 +243,13 @@ export function calcHeatIndex(tempF: number, humidity: number): number {
 }
 
 export function calcDewPointF(tempC: number, humidity: number): number {
-  // Calculate the dew point using the formula from https://en.wikipedia.org/wiki/Dew_point#Calculating_the_dew_point
-  const b = 17.62;
-  const c = 243.12; // degrees Celsius
-  const d = 234.5; // degrees Celsius
-  const gamma_m =
-    Math.log(humidity / 100) *
-    Math.exp((b - tempC / d) * (tempC / (c + tempC)));
-  return ((c * gamma_m) / (b - gamma_m)) * (9 / 5) + 32; // Convert to Fahrenheit
+  // Calculate the dew point using the formula from Lawrence, Mark G. (February 2005). "The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: A Simple Conversion and Applications". Bulletin of the American Meteorological Society. 86 (2): 225–233. Bibcode:2005BAMS...86..225L. doi:10.1175/BAMS-86-2-225.
+  const dewPointC =
+    tempC -
+    ((100 - humidity) / 5) * (tempC / 300) ** 2 -
+    0.00135 * (humidity - 84) ** 2 +
+    0.35;
+  return dewPointC * (9 / 5) + 32; // Convert to Fahrenheit
 }
 
 export function dewPointEmoji(dewPointF: number): string {
