@@ -255,16 +255,14 @@ export function calcDewPointF(tempC: number, humidity: number): number {
 export function dewPointEmoji(dewPointF: number): string {
   if (isNaN(dewPointF)) {
     return "";
-  } else if (dewPointF < 30) {
-    return "🟠"; // Dry
-  } else if (dewPointF < 55) {
-    return "🟢"; // Comfortable
-  } else if (dewPointF < 65) {
-    return "🟡"; // Moderate
+  } else if (dewPointF < 50) {
+    return "🏜️"; // Very dry
+  } else if (dewPointF < 60) {
+    return "🏖️"; // Comfortable
   } else if (dewPointF < 70) {
-    return "🟠"; // Uncomfortable
+    return "💧"; // Humid
   } else {
-    return "🔴"; // Oppressive
+    return "💦"; // Oppressive
   }
 }
 
