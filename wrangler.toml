@@ -2,7 +2,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "ip"
 main = "src/index.ts"
-compatibility_date = "2025-07-01"
+compatibility_date = "2025-07-14"
 
 [assets]
 directory = "./public"
