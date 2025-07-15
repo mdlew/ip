@@ -8,16 +8,11 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vitest",
 		"generate-types": "wrangler types"
-	},
-	"dependencies": {
-		"typescript": "latest",
-		"wrangler": "latest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "latest",
-		"@cloudflare/vitest-pool-workers": "latest",
-		"vitest": "latest"
+		"typescript": "latest",
+		"wrangler": "latest"
 	}
 }
