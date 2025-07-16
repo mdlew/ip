@@ -244,12 +244,18 @@ export function calcHeatIndex(tempF: number, humidity: number): number {
 
 export function calcDewPointF(tempC: number, humidity: number): number {
   // Calculate the dew point using the formula from Lawrence, Mark G. (February 2005). "The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: A Simple Conversion and Applications". Bulletin of the American Meteorological Society. 86 (2): 225–233. Bibcode:2005BAMS...86..225L. doi:10.1175/BAMS-86-2-225.
-  const dewPointC =
-    tempC -
-    ((100 - humidity) / 5) * (tempC / 300) ** 2 -
-    0.00135 * (humidity - 84) ** 2 +
-    0.35;
-  return dewPointC * (9 / 5) + 32; // Convert to Fahrenheit
+  // Eq 21:
+  // const dewPointC =
+  //   tempC -
+  //   ((100 - humidity) / 5) * (tempC / 300) ** 2 -
+  //   0.00135 * (humidity - 84) ** 2 +
+  //   0.35;
+  // Eq 11:
+  const tempK = tempC + 273.15; // Convert Celsius to Kelvin
+  const dewPointK =
+    tempK /
+    (1 - (tempK * Math.log(humidity / 100)) / ((2.501 * 10 ** 6) / 461.5));
+  return (dewPointK - 273.15) * (9 / 5) + 32; // Convert to Fahrenheit
 }
 
 export function dewPointEmoji(dewPointF: number): string {
