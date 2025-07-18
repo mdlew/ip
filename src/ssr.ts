@@ -1,30 +1,40 @@
 /**
  * @file ssr.ts
- * @description This file contains server-side rendering (SSR) logic for generating an HTML page
- *              that displays IP geolocation, weather, and air quality information. It integrates
- *              with multiple APIs, including WAQI, NWS, and AirNow, to fetch and display data.
+ * @description Server-side rendering (SSR) logic for generating an HTML page with IP geolocation,
+ *              weather, and air quality information. Integrates WAQI, NWS, and AirNow APIs to fetch
+ *              and display current conditions, forecasts, and alerts.
  *
  * @author Matthew Lew
  * @date July 1, 2025
  *
- * @exports renderPage - Main function to render the HTML page.
+ * @exports
+ * @function renderPage - Main function to render the HTML page to a stream.
  *
  * @dependencies
- * - Intl.NumberFormat: For formatting numbers.
- * - Intl.DateTimeFormat: For formatting dates and times.
- * - fetchProducts: Utility function for making API requests.
- * - Various utility functions for formatting and rendering data.
+ * - Intl.NumberFormat: For number formatting.
+ * - Intl.DateTimeFormat: For date/time formatting.
+ * - fetchProducts, lat2y, lon2x, toCSSGradient, statusEmoji, aqiToEmoji, aqiCategoryToEmoji,
+ *   dewPointEmoji, calcHeatIndex, calcDewPointF, nwsForecastIconToEmoji, nwsAlertSeverityToEmoji,
+ *   nwsAlertResponseToEmoji, nwsAlertEventToEmoji, userAgentIcon: Utility functions from utils.ts.
  *
- * @interfaces
- * - Env: Defines the environment variables required for API integrations.
+ * @interface Env
+ * @property {string} WAQI_TOKEN - Token for WAQI API.
+ * @property {string} NWS_AGENT - User agent for NWS API.
+ * @property {string} AIRNOW_KEY - Key for AirNow API.
+ * @property {Fetcher} ASSETS - Fetcher binding for static assets.
  *
  * @functions
- * - renderHead: Generates the HTML head section.
- * - renderGeolocation: Generates the geolocation section of the page.
- * - renderWeather: Fetches and renders weather and air quality data.
- * - renderForecast: Fetches and renders forecast data.
- * - renderFooter: Generates the footer section of the page.
- * - renderPage: Main function to orchestrate the rendering process.
+ * @function renderHead - Generates the HTML head section with styles and scripts.
+ * @function renderGeolocation - Generates the geolocation section of the page.
+ * @function renderWeather - Fetches and renders weather and air quality data.
+ * @function renderForecast - Fetches and renders forecast and alert data.
+ * @function renderFooter - Generates the footer section of the page.
+ * @function renderPage - Orchestrates the rendering process and writes to the stream.
+ *
+ * @features
+ * - Dynamic background gradients based on time of day.
+ * - Interactive map and collapsible alert sections.
+ * - Performance logging for SSR rendering steps.
  */
 
 import {
@@ -605,9 +615,10 @@ async function renderForecast(
           alertInfo?.headline
         }</button><div class="content"><h3> ${nwsAlertEventToEmoji(
           alertInfo?.event
-        )} ${alertInfo?.event}</h3><p>${
-          alertInfo?.description
-        }</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${
+        )} ${alertInfo?.event}</h3><p>${alertInfo?.description.replace(
+          /\n/g,
+          "<br />"
+        )}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${
           alertInfo?.status
         }, Urgency: ${alertInfo?.urgency}, Certainty: ${
           alertInfo?.certainty
@@ -692,7 +703,7 @@ async function renderForecast(
       } else {
         html_content += `<div><button class="collapsible">Discussion</button><div class="content"><p>${
           typeof firstAirnowForecast.Discussion === "string"
-            ? firstAirnowForecast.Discussion
+            ? firstAirnowForecast.Discussion.replace(/\n/g, "<br />")
             : ""
         }</p></div></div>`;
       }

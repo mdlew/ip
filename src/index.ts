@@ -1,33 +1,36 @@
 /**
  * @file index.ts
- * @description This file serves as the entry point for the Cloudflare Worker application. It handles
- *              incoming HTTP requests, processes them based on their URL paths, and returns appropriate
- *              responses. The application supports static asset delivery, radar image proxying, and
- *              IP geolocation with weather data rendering.
+ * @description Entry point for the Cloudflare Worker application. Handles incoming HTTP requests,
+ *              routes them based on URL paths, and returns appropriate responses. Supports static asset
+ *              delivery, radar image proxying (with WebP transformation), and IP geolocation with weather data.
  *
  * @author Matthew Lew
  * @date July 1, 2025
  *
  * @exports
- * - Default export: The main fetch handler for the Cloudflare Worker.
+ * @default {ExportedHandler<Env>} - Main fetch handler for the Cloudflare Worker.
  *
- * @interfaces
- * - Env: Defines the environment variables required for API integrations and asset fetching.
+ * @interface Env
+ * @property {string} WAQI_TOKEN - Token for WAQI API.
+ * @property {string} NWS_AGENT - User agent for NWS API.
+ * @property {string} AIRNOW_KEY - Key for AirNow API.
+ * @property {Fetcher} ASSETS - Fetcher binding for static assets.
  *
  * @constants
- * - STATIC_URLS: Array of paths for static assets.
- * - RADAR_PROXY_URL: Path for radar image proxy requests.
- * - WORKER_URL: Path for the main IP geolocation and weather rendering.
+ * @constant {string[]} STATIC_URLS - Paths for static assets.
+ * @constant {string} RADAR_PROXY_URL - Path for radar image proxy requests.
+ * @constant {string} WORKER_URL - Path for main IP geolocation and weather rendering.
  *
  * @functions
- * - MethodNotAllowed: Returns a 405 response for unsupported HTTP methods.
- * - fetch: Main handler function for processing incoming requests.
+ * @function MethodNotAllowed - Returns a 405 response for unsupported HTTP methods.
+ * @function fetch - Main handler for processing incoming requests.
  *
  * @features
- * - Implements security headers such as Content-Security-Policy, X-Frame-Options, and more.
- * - Proxies radar images with optional image transformation to WebP format.
+ * - Sets security headers (Content-Security-Policy, X-Frame-Options, etc.).
+ * - Proxies radar images with optional WebP transformation.
  * - Serves static assets from the ASSETS binding.
- * - Renders an HTML page with IP geolocation and weather data using the `renderPage` function.
+ * - Renders HTML page with IP geolocation and weather data via `renderPage`.
+ * - Enforces TLS 1.2+ for all requests.
  */
 
 import { renderPage } from "./ssr.js";
@@ -208,7 +211,10 @@ export default {
       // Set CORS headers
       response.headers.set("Access-Control-Allow-Origin", url.origin);
       // Set Cache-Control headers, okay to cache for 1 year because URL refreshes every 2 minutes
-      response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      response.headers.set(
+        "Cache-Control",
+        "public, max-age=31536000, immutable"
+      );
       // Append to/Add Vary header so browser will cache response correctly
       response.headers.append("Vary", "Origin");
 

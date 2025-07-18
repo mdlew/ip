@@ -1,25 +1,29 @@
 /**
  * @file utils.ts
- * @description This file contains utility functions and constants used throughout the application.
- *              These include helper functions for API requests, geolocation conversions, gradient
- *              generation, and various emoji mappings for data visualization.
+ * @description Utility functions and constants for API requests, geolocation conversions,
+ *              CSS gradient generation, weather/air quality emoji mapping, and user agent icons.
  *
  * @author Matthew Lew
  * @date July 1, 2025
  *
  * @exports
- * - fetchProducts: Helper function for making API requests with timeout and abort support.
- * - lat2y, lon2x: Functions for converting latitude and longitude to Web Mercator coordinates.
- * - toCSSGradient: Converts an hour to a CSS linear gradient string.
- * - statusEmoji: Maps fetch success status to an emoji.
- * - aqiToEmoji, aqiCategoryToEmoji: Maps AQI values and categories to emojis.
- * - nwsForecastIconToEmoji: Maps NWS forecast icons to emojis.
- * - nwsAlertSeverityToEmoji, nwsAlertResponseToEmoji, nwsAlertEventToEmoji: Maps NWS alert data to emojis.
- * - userAgentIcon: Maps user agent strings to emojis.
- *
- * @constants
- * - fetchTimeout: Maximum time (in milliseconds) to wait for an API response.
- * - grads: Array of gradient data for background color generation.
+ * @constant {number} fetchTimeout - Maximum time (ms) to wait for an API response.
+ * @function fetchProducts - Fetches data from a URL with timeout and abort support.
+ * @function lat2y - Converts latitude (degrees) to Web Mercator Y (meters).
+ * @function lon2x - Converts longitude (degrees) to Web Mercator X (meters).
+ * @constant {Array} grads - Gradient data for background color generation by hour.
+ * @function toCSSGradient - Converts an hour (0-23) to a CSS linear gradient string.
+ * @function calcHeatIndex - Calculates heat index (°F) from temperature and humidity.
+ * @function calcDewPointF - Calculates dew point (°F) from temperature (°C) and humidity.
+ * @function dewPointEmoji - Maps dew point (°F) to an emoji for dryness/humidity.
+ * @function statusEmoji - Maps fetch success status to an emoji.
+ * @function aqiToEmoji - Maps AQI value to an emoji for air quality.
+ * @function aqiCategoryToEmoji - Maps AQI category (1-6) to an emoji.
+ * @function nwsForecastIconToEmoji - Maps NWS forecast icon text to weather emojis.
+ * @function nwsAlertSeverityToEmoji - Maps NWS alert severity to an emoji.
+ * @function nwsAlertResponseToEmoji - Maps NWS alert response type to an emoji.
+ * @function nwsAlertEventToEmoji - Maps NWS alert event text to relevant emojis.
+ * @function userAgentIcon - Maps user agent string to device/OS emojis.
  */
 
 // The `fetchTimeout` constant defines the maximum time (in milliseconds) to wait for a response from an API request.
@@ -243,13 +247,7 @@ export function calcHeatIndex(tempF: number, humidity: number): number {
 }
 
 export function calcDewPointF(tempC: number, humidity: number): number {
-  // Calculate the dew point using the formula from Lawrence, Mark G. (February 2005). "The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: A Simple Conversion and Applications". Bulletin of the American Meteorological Society. 86 (2): 225–233. Bibcode:2005BAMS...86..225L. doi:10.1175/BAMS-86-2-225.
-  // Eq 21:
-  // const dewPointC =
-  //   tempC -
-  //   ((100 - humidity) / 5) * (tempC / 300) ** 2 -
-  //   0.00135 * (humidity - 84) ** 2 +
-  //   0.35;
+  // Calculate the dew point using the formula from Lawrence MG (2005) The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: A Simple Conversion and Applications. Bulletin of the American Meteorological Society, 86(2):225–234. https://doi.org/10.1175/BAMS-86-2-225
   // Eq 11:
   const tempK = tempC + 273.15; // Convert Celsius to Kelvin
   const dewPointK =
