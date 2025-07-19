@@ -703,7 +703,7 @@ async function renderForecast(
       } else {
         html_content += `<div><button class="collapsible">Discussion</button><div class="content"><p>${
           typeof firstAirnowForecast.Discussion === "string"
-            ? firstAirnowForecast.Discussion.replace(/\n/g, "<br />")
+            ? firstAirnowForecast.Discussion.replace(/\n\n/g, "<br />")
             : ""
         }</p></div></div>`;
       }
