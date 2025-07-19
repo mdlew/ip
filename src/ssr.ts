@@ -616,7 +616,7 @@ async function renderForecast(
         }</button><div class="content"><h3> ${nwsAlertEventToEmoji(
           alertInfo?.event
         )} ${alertInfo?.event}</h3><p>${alertInfo?.description.replace(
-          /\n/g,
+          /\n\n/g,
           "<br />"
         )}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${
           alertInfo?.status
