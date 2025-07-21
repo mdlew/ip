@@ -184,14 +184,11 @@ function renderGeolocation(request: Request): string {
       center: [${user.longitude}, ${user.latitude}],  // Initial focus coordinate
       zoom: 11
     });
-
     // MapLibre GL JS does not handle RTL text by default,
     // so we recommend adding this dependency to fully support RTL rendering if your style includes RTL text
     maplibregl.setRTLTextPlugin('https://unpkg.com/@mapbox/mapbox-gl-rtl-text@latest/dist/mapbox-gl-rtl-text.js');
-
     // Add zoom and rotation controls to the map.
     map.addControl(new maplibregl.NavigationControl());
-
     // Next, we can add markers to the map
     const marker = new maplibregl.Marker()
       .setLngLat([${user.longitude}, ${user.latitude}])
@@ -367,7 +364,7 @@ async function renderWeather(
 
   html_content += `<p> Relative humidity: ${dewPointEmoji(
     dewPointF
-  )} ${humidity}&percnt;, Dew point: ${floatFormat.format(dewPointF)} °F</p>`;
+  )} ${humidity}&percnt;, <a href="https://www.weather.gov/tbw/dewpoint#dp">Dew point</a>: ${floatFormat.format(dewPointF)} °F</p>`;
   html_content += `<p> Wind speed: ${floatFormat.format(windSpeed)} mph</p>`;
 
   // air quality data
@@ -617,7 +614,7 @@ async function renderForecast(
           alertInfo?.event
         )} ${alertInfo?.event}</h3><p>${alertInfo?.description.replace(
           /\n\n/g,
-          "<br />"
+          "</p><p>"
         )}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${
           alertInfo?.status
         }, Urgency: ${alertInfo?.urgency}, Certainty: ${
@@ -674,11 +671,11 @@ async function renderForecast(
         if (newDate) {
           html_content += `<p> ${dayStr[airnowDateIdx]}: `;
           if (currAirnowData?.ActionDay) {
-            html_content += `<h2>⚠️ Action day</h2><br />`;
+            html_content += `<h2>⚠️ Action day</h2>`;
           }
           newDate = false;
         } else {
-          html_content += `<br />`;
+          html_content += `</p><p>`;
         }
         html_content += `${currAirnowData.ParameterName}: ${aqiCategoryToEmoji(
           currAirnowData.Category.Number
@@ -703,7 +700,7 @@ async function renderForecast(
       } else {
         html_content += `<div><button class="collapsible">Discussion</button><div class="content"><p>${
           typeof firstAirnowForecast.Discussion === "string"
-            ? firstAirnowForecast.Discussion.replace(/\n\n/g, "<br />")
+            ? firstAirnowForecast.Discussion.replace(/\n\n/g, "</p><p>")
             : ""
         }</p></div></div>`;
       }
