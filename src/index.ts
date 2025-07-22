@@ -95,7 +95,7 @@ export default {
 			  Enabling these headers will permit content from a trusted domain and all its subdomains.
 			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 			  */
-      "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'; style-src 'nonce-${nonce}' https://unpkg.com/; worker-src blob: ; child-src blob: ; img-src data: 'self' blob: ; object-src 'none'; default-src 'self'; base-uri 'none'`,
+      "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'; style-src 'nonce-${nonce}' https://unpkg.com/; worker-src blob: ; child-src blob: ; img-src data: 'self' blob: ; object-src 'none'; default-src 'self' https://unpkg.com/ https://tiles.stadiamaps.com/; base-uri 'none'`,
       /*
 			  You can also set Strict-Transport-Security headers.
 			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
