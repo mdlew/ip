@@ -95,7 +95,7 @@ export default {
 			  Enabling these headers will permit content from a trusted domain and all its subdomains.
 			  @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 			  */
-      "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'; style-src 'nonce-${nonce}'; object-src 'none'; base-uri 'none';`,
+      "Content-Security-Policy": `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'; style-src 'nonce-${nonce}'; worker-src blob: ; child-src blob: ; img-src data: blob: ; object-src 'none'; base-uri 'none'`,
       /*
 			  You can also set Strict-Transport-Security headers.
 			  These are not automatically set because your website might get added to Chrome's HSTS preload list.
