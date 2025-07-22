@@ -129,17 +129,17 @@ function renderHead(): string {
   font-style: normal;
   font-display: swap;
  }
- body{padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);}
- footer { padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
- #container{display: flex; flex-direction:column;min-height: 100%;}
- body{background: ${toCSSGradient(
+ body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
    hour
- )};} h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a{color: ${accentColor};} a:hover{color: ${textColor};}
- .collapsible {  background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none; }
- .active, .collapsible:hover {  background-color: #59230B;}
- .collapsible:after {  content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {  content: '➖';}
- .content {  padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
- #map { width: 100%; height: 350px; marginwidth: 0; marginheight: 0; }`;
+ )};}
+ img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%;}
+ footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
+ h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${textColor};}
+ .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none;}
+ .active, .collapsible:hover {background-color: #59230B;}
+ .collapsible:after {content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
+ .content {padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
+ #map {width: 100%; height: 350px; marginwidth: 0; marginheight: 0;}`;
   const html_head = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -444,7 +444,7 @@ async function renderWeather(
       nwsPointsData?.radarStation
     }&refreshed=${Math.round(
       Date.now() / 120000
-    )}" width="600" height="550" alt="radar loop" style="max-width: 100%; height: auto;"></a></p>`;
+    )}" width="600" height="550" alt="radar loop"></a></p>`;
   }
 
   if (!(waqiData == undefined)) {
@@ -463,7 +463,6 @@ async function renderWeather(
       firstAirnowSensor.LocalTimeZone
     }</p>`;
   }
-  // html_content += `<p><iframe loading="lazy" title="Airnow widget" height="230" width="230" src="https://widget.airnow.gov/aq-dial-widget-primary-pollutant/?latitude=${user.latitude}&longitude=${user.longitude}&transparent=true" style="border: none; border-radius: 25px;"></iframe></p>`
 
   timingLog.renderWeather = performance.now() - start;
   return [
