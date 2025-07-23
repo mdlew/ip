@@ -139,7 +139,7 @@ function renderHead(): string {
  .active, .collapsible:hover {background-color: #59230B;}
  .collapsible:after {content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
  .content {padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
- #map {width: 100%; height: 350px; marginwidth: 0; marginheight: 0;}`;
+ #map {width: 100%; height: 350px;}`;
   const html_head = `<!DOCTYPE html>
 <html lang="en">
 <head>
