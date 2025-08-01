@@ -670,7 +670,7 @@ async function renderForecast(
         if (newDate) {
           html_content += `<p> ${dayStr[airnowDateIdx]}: `;
           if (currAirnowData?.ActionDay) {
-            html_content += `<h2>⚠️ Action day</h2>`;
+            html_content += `<b>⚠️ Action day ⚠️</b></p><p>`;
           }
           newDate = false;
         } else {
