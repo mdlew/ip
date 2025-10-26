@@ -130,8 +130,8 @@ function renderHead(): string {
   font-display: swap;
  }
  body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
-   hour
- )};}
+    hour
+  )};}
  img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%;}
  footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${textColor};}
@@ -364,7 +364,9 @@ async function renderWeather(
 
   html_content += `<p> Relative humidity: ${dewPointEmoji(
     dewPointF
-  )} ${humidity}&percnt;, <a href="https://www.weather.gov/tbw/dewpoint#dp">Dew point</a>: ${floatFormat.format(dewPointF)} °F</p>`;
+  )} ${humidity}&percnt;, <a href="https://www.weather.gov/tbw/dewpoint#dp">Dew point</a>: ${floatFormat.format(
+    dewPointF
+  )} °F</p>`;
   html_content += `<p> Wind speed: ${floatFormat.format(windSpeed)} mph</p>`;
 
   // air quality data
@@ -730,12 +732,9 @@ function renderFooter(
 
   const html_footer = `  <h1>Browser ${userAgentIcon(userAgentStr ?? "")}</h1>
   <p> User Agent: ${userAgentStr}</p>
-  <p> HTTP Version: ${request.cf?.httpProtocol}</p>
-  <p> TLS Version: ${request.cf?.tlsVersion}</p>
-  <p> TLS Cipher: ${request.cf?.tlsCipher}</p>
-  <p> Cloudflare datacenter <a href="https://en.wikipedia.org/wiki/IATA_airport_code">IATA code</a>: ${
-    request.cf?.colo
-  }</p>
+  <p> Request: ${request.cf?.httpProtocol}, ${request.cf?.tlsVersion}, ${
+    request.cf?.tlsCipher
+  } <a href="https://developers.cloudflare.com/ssl/origin-configuration/cipher-suites/">cipher</a></p>
 </div>
 <footer>
   <p> Page generated on ${user.dateFormat.format(new Date())} in ${
@@ -745,7 +744,10 @@ function renderFooter(
     timingLog.renderForecast +
     performance.now() -
     start
-  } ms. NWS location ${statusEmoji(nwsPointsSuccess)}. NWS alert ${statusEmoji(
+  } ms by Cloudflare <a href="https://en.wikipedia.org/wiki/IATA_airport_code">${
+    request.cf?.colo
+  }</a>.</p>
+  <p> NWS location ${statusEmoji(nwsPointsSuccess)}. NWS alert ${statusEmoji(
     nwsAlertSuccess
   )}. NWS forecast ${statusEmoji(
     nwsForecastSuccess
