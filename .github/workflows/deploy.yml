@@ -46,7 +46,7 @@ jobs:
           NWS_AGENT: ${{ secrets.NWS_AGENT }}
           AIRNOW_KEY: ${{ secrets.AIRNOW_KEY }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: build
           path: |
