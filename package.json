@@ -4,7 +4,7 @@
 	"description": "IP Geolocation",
 	"main": "src/index.js",
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc -p tsconfig.json",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",

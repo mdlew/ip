@@ -1,8 +1,12 @@
 # Top-level configuration
 #:schema node_modules/wrangler/config-schema.json
 name = "ip"
-main = "src/index.ts"
-compatibility_date = "2025-07-14"
+main = "./dist/index.js"
+compatibility_date = "2025-11-05"
+
+[build]
+command = "pnpm run build"
+upload = { format = "modules", dir = "dist" }
 
 [assets]
 directory = "./public"
