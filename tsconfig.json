@@ -26,9 +26,7 @@
 		"checkJs": true,
 
 		/* Disable emitting files from a compilation. */
-		"noEmit": false,
-		/* Output directory for compiled files. */
-		"outDir": "dist",
+		"noEmit": true,
 
 		/* Ensure that each file can be safely transpiled without relying on other imports. */
 		"isolatedModules": true,
