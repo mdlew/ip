@@ -471,9 +471,9 @@ async function renderWeather(
     html_content,
     nwsPointsData,
     airnowSensorData,
-    waqiRequestSuccess,
-    nwsPointsRequestSuccess,
-    airnowSensorRequestSuccess,
+    !(waqiData == undefined),
+    !(nwsPointsData == undefined),
+    !(airnowSensorData == undefined),
   ];
 }
 
@@ -711,9 +711,9 @@ async function renderForecast(
   timingLog.renderForecast = performance.now() - start;
   return [
     html_content,
-    nwsAlertRequestSuccess,
-    nwsForecastRequestSuccess,
-    airnowForecastRequestSuccess,
+    (nwsAlertSuccess && Array.isArray(nwsAlertData)),
+    nwsForecastSuccess,
+    airnowForecastSuccess,
   ];
 }
 
