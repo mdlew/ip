@@ -1,29 +1,38 @@
 /**
  * @file utils.ts
- * @description Utility functions and constants for API requests, geolocation conversions,
- *              CSS gradient generation, weather/air quality emoji mapping, and user agent icons.
+ * @description Collection of small utilities used across the app:
+ *  - network helper with timeout/abort support,
+ *  - Web Mercator coordinate conversions,
+ *  - hour-based CSS background gradient data/formatter,
+ *  - temperature/humidity helpers (heat index, dew point) and related emoji mapping,
+ *  - air quality and NWS forecast/alert emoji mappers,
+ *  - simple user-agent → icon mapper.
+ *
+ * Notes:
+ *  - `fetchTimeout` is a local timeout constant used by `fetchProducts` (not exported).
+ *  - `grads` is an exported array of gradient stop definitions (indexed by hour 0–23).
+ *
+ * Exports:
+ *  - `fetchProducts(url, options, fetchEnabled?)` : Promise<any | null>
+ *  - `lat2y(lat)` : number
+ *  - `lon2x(lon)` : number
+ *  - `grads` : Array<Array<{color: string, position: number}>>
+ *  - `toCSSGradient(hour)` : string
+ *  - `calcHeatIndex(tempF, humidity)` : number
+ *  - `calcDewPointF(tempC, humidity)` : number
+ *  - `dewPointEmoji(dewPointF)` : string
+ *  - `statusEmoji(fetchSuccess)` : string
+ *  - `timeoutStatusEmoji(fetchSuccess)` : string
+ *  - `aqiToEmoji(AQI)` : string
+ *  - `aqiCategoryToEmoji(category)` : string
+ *  - `nwsForecastIconToEmoji(iconText)` : string
+ *  - `nwsAlertSeverityToEmoji(alertSeverity)` : string
+ *  - `nwsAlertResponseToEmoji(response)` : string
+ *  - `nwsAlertEventToEmoji(event)` : string
+ *  - `userAgentIcon(userAgentStr)` : string
  *
  * @author Matthew Lew
  * @date July 1, 2025
- *
- * @exports
- * @constant {number} fetchTimeout - Maximum time (ms) to wait for an API response.
- * @function fetchProducts - Fetches data from a URL with timeout and abort support.
- * @function lat2y - Converts latitude (degrees) to Web Mercator Y (meters).
- * @function lon2x - Converts longitude (degrees) to Web Mercator X (meters).
- * @constant {Array} grads - Gradient data for background color generation by hour.
- * @function toCSSGradient - Converts an hour (0-23) to a CSS linear gradient string.
- * @function calcHeatIndex - Calculates heat index (°F) from temperature and humidity.
- * @function calcDewPointF - Calculates dew point (°F) from temperature (°C) and humidity.
- * @function dewPointEmoji - Maps dew point (°F) to an emoji for dryness/humidity.
- * @function statusEmoji - Maps fetch success status to an emoji.
- * @function aqiToEmoji - Maps AQI value to an emoji for air quality.
- * @function aqiCategoryToEmoji - Maps AQI category (1-6) to an emoji.
- * @function nwsForecastIconToEmoji - Maps NWS forecast icon text to weather emojis.
- * @function nwsAlertSeverityToEmoji - Maps NWS alert severity to an emoji.
- * @function nwsAlertResponseToEmoji - Maps NWS alert response type to an emoji.
- * @function nwsAlertEventToEmoji - Maps NWS alert event text to relevant emojis.
- * @function userAgentIcon - Maps user agent string to device/OS emojis.
  */
 
 // The `fetchTimeout` constant defines the maximum time (in milliseconds) to wait for a response from an API request.
@@ -275,6 +284,13 @@ export function statusEmoji(fetchSuccess: boolean): string {
     return "✅"; // Success
   } else {
     return "❌"; // Error
+  }
+}
+export function timeoutStatusEmoji(fetchSuccess: boolean): string {
+  if (fetchSuccess) {
+    return ""; // Success
+  } else {
+    return "⏳"; // Timeout
   }
 }
 

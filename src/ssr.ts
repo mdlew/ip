@@ -1,40 +1,28 @@
 /**
  * @file ssr.ts
- * @description Server-side rendering (SSR) logic for generating an HTML page with IP geolocation,
- *              weather, and air quality information. Integrates WAQI, NWS, and AirNow APIs to fetch
- *              and display current conditions, forecasts, and alerts.
+ * @description Server-side rendering helpers that assemble an HTML page with IP geolocation,
+ *   current observations, air quality, forecasts, and alerts. The primary public entrypoint
+ *   is `renderPage`, which writes the generated HTML to a provided `WritableStream` writer.
+ *
+ * Integrations:
+ *  - WAQI (air quality), NWS (weather.gov) for forecasts/alerts, and AirNow for additional AQ data.
+ *  - Uses Cloudflare Workers `Request.cf` metadata for client IP / location information.
+ *
+ * Types / exports:
+ *  - `Env` interface: `{ WAQI_TOKEN, NWS_AGENT, AIRNOW_KEY, ASSETS }` (ASSETS is a fetcher binding).
+ *  - `renderPage(writer, request, env, nonce): Promise<void>` — public renderer.
+ *
+ * Internal helpers (module-local, not exported): `renderHead`, `renderGeolocation`,
+ * `renderWeather`, `renderForecast`, `renderFooter`.
+ *
+ * Notes:
+ *  - Relies on utility functions from `src/utils.ts` (network helper, coordinate conversions,
+ *    gradient generator, and emoji mappers).
+ *  - Produces lightweight HTML with embedded styles, MapLibre integration, and simple
+ *    collapsible alert sections.
  *
  * @author Matthew Lew
  * @date July 1, 2025
- *
- * @exports
- * @function renderPage - Main function to render the HTML page to a stream.
- *
- * @dependencies
- * - Intl.NumberFormat: For number formatting.
- * - Intl.DateTimeFormat: For date/time formatting.
- * - fetchProducts, lat2y, lon2x, toCSSGradient, statusEmoji, aqiToEmoji, aqiCategoryToEmoji,
- *   dewPointEmoji, calcHeatIndex, calcDewPointF, nwsForecastIconToEmoji, nwsAlertSeverityToEmoji,
- *   nwsAlertResponseToEmoji, nwsAlertEventToEmoji, userAgentIcon: Utility functions from utils.ts.
- *
- * @interface Env
- * @property {string} WAQI_TOKEN - Token for WAQI API.
- * @property {string} NWS_AGENT - User agent for NWS API.
- * @property {string} AIRNOW_KEY - Key for AirNow API.
- * @property {Fetcher} ASSETS - Fetcher binding for static assets.
- *
- * @functions
- * @function renderHead - Generates the HTML head section with styles and scripts.
- * @function renderGeolocation - Generates the geolocation section of the page.
- * @function renderWeather - Fetches and renders weather and air quality data.
- * @function renderForecast - Fetches and renders forecast and alert data.
- * @function renderFooter - Generates the footer section of the page.
- * @function renderPage - Orchestrates the rendering process and writes to the stream.
- *
- * @features
- * - Dynamic background gradients based on time of day.
- * - Interactive map and collapsible alert sections.
- * - Performance logging for SSR rendering steps.
  */
 
 import {
@@ -51,6 +39,7 @@ import {
   nwsAlertSeverityToEmoji,
   nwsForecastIconToEmoji,
   statusEmoji,
+  timeoutStatusEmoji,
   toCSSGradient,
   userAgentIcon,
 } from "./utils.ts";
@@ -202,7 +191,9 @@ function renderGeolocation(request: Request): string {
 async function renderWeather(
   request: Request,
   env: Env
-): Promise<[string, any, any, boolean, boolean, boolean]> {
+): Promise<
+  [string, any, any, boolean, boolean, boolean, boolean, boolean, boolean]
+> {
   const start = performance.now();
 
   // WAQI API setup https://aqicn.org/api/
@@ -471,6 +462,9 @@ async function renderWeather(
     html_content,
     nwsPointsData,
     airnowSensorData,
+    waqiRequestSuccess,
+    nwsPointsRequestSuccess,
+    airnowSensorRequestSuccess,
     !(waqiData == undefined),
     !(nwsPointsData == undefined),
     !(airnowSensorData == undefined),
@@ -481,7 +475,7 @@ async function renderForecast(
   env: Env,
   nwsPointsData: any,
   airnowSensorData: any
-): Promise<[string, boolean, boolean, boolean]> {
+): Promise<[string, boolean, boolean, boolean, boolean, boolean, boolean]> {
   const start = performance.now();
 
   // prepare to fetch data from APIs
@@ -711,7 +705,10 @@ async function renderForecast(
   timingLog.renderForecast = performance.now() - start;
   return [
     html_content,
-    (nwsAlertSuccess && Array.isArray(nwsAlertData)),
+    nwsAlertRequestSuccess,
+    nwsForecastRequestSuccess,
+    airnowForecastRequestSuccess,
+    nwsAlertSuccess && Array.isArray(nwsAlertData),
     nwsForecastSuccess,
     airnowForecastSuccess,
   ];
@@ -719,12 +716,18 @@ async function renderForecast(
 
 function renderFooter(
   request: Request,
-  waqiSuccess: boolean,
-  nwsPointsSuccess: boolean,
-  airnowSensorSuccess: boolean,
-  nwsAlertSuccess: boolean,
-  nwsForecastSuccess: boolean,
-  airnowForecastSuccess: boolean
+  waqiRequestSuccess: boolean,
+  nwsPointsRequestSuccess: boolean,
+  airnowSensorRequestSuccess: boolean,
+  waqiDataExists: boolean,
+  nwsPointsDataExists: boolean,
+  airnowSensorDataExists: boolean,
+  nwsAlertRequestSuccess: boolean,
+  nwsForecastRequestSuccess: boolean,
+  airnowForecastRequestSuccess: boolean,
+  nwsAlertDataExists: boolean,
+  nwsForecastDataExists: boolean,
+  airnowForecastDataExists: boolean
 ): string {
   const start = performance.now();
 
@@ -747,15 +750,19 @@ function renderFooter(
   } ms by Cloudflare <a href="https://en.wikipedia.org/wiki/IATA_airport_code">${
     request.cf?.colo
   }</a>.</p>
-  <p> NWS location ${statusEmoji(nwsPointsSuccess)}. NWS alert ${statusEmoji(
-    nwsAlertSuccess
-  )}. NWS forecast ${statusEmoji(
-    nwsForecastSuccess
-  )}. AirNow forecast ${statusEmoji(
-    airnowForecastSuccess
-  )}. Airnow sensor ${statusEmoji(airnowSensorSuccess)}. WAQI ${statusEmoji(
-    waqiSuccess
-  )}.</p>
+  <p> NWS location ${timeoutStatusEmoji(nwsPointsRequestSuccess)}${statusEmoji(
+    nwsPointsDataExists
+  )}. NWS alert ${timeoutStatusEmoji(nwsAlertRequestSuccess)}${statusEmoji(
+    nwsAlertDataExists
+  )}. NWS forecast ${timeoutStatusEmoji(
+    nwsForecastRequestSuccess
+  )}${statusEmoji(nwsForecastDataExists)}. AirNow forecast ${timeoutStatusEmoji(
+    airnowForecastRequestSuccess
+  )}${statusEmoji(airnowForecastDataExists)}. Airnow sensor ${timeoutStatusEmoji(
+    airnowSensorRequestSuccess
+  )}${statusEmoji(airnowSensorDataExists)}. WAQI ${timeoutStatusEmoji(
+    waqiRequestSuccess
+  )}${statusEmoji(waqiDataExists)}.</p>
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
 </footer>
@@ -833,6 +840,9 @@ export async function renderPage(
     waqiRequestSuccess,
     nwsPointsRequestSuccess,
     airnowSensorRequestSuccess,
+    waqiDataExists,
+    nwsPointsDataExists,
+    airnowSensorDataExists,
   ] = await renderWeather(request, env);
   writer.write(encoder.encode(weatherContent));
   const [
@@ -840,6 +850,9 @@ export async function renderPage(
     nwsAlertRequestSuccess,
     nwsForecastRequestSuccess,
     airnowForecastRequestSuccess,
+    nwsAlertDataExists,
+    nwsForecastDataExists,
+    airnowForecastDataExists,
   ] = await renderForecast(env, nwsPointsData, airnowSensorData);
   writer.write(encoder.encode(forecastContent));
   writer.write(
@@ -849,9 +862,15 @@ export async function renderPage(
         waqiRequestSuccess,
         nwsPointsRequestSuccess,
         airnowSensorRequestSuccess,
+        waqiDataExists,
+        nwsPointsDataExists,
+        airnowSensorDataExists,
         nwsAlertRequestSuccess,
         nwsForecastRequestSuccess,
-        airnowForecastRequestSuccess
+        airnowForecastRequestSuccess,
+        nwsAlertDataExists,
+        nwsForecastDataExists,
+        airnowForecastDataExists
       )
     )
   );
