@@ -475,7 +475,19 @@ async function renderForecast(
   env: Env,
   nwsPointsData: any,
   airnowSensorData: any
-): Promise<[string, boolean, boolean, boolean, boolean, boolean, boolean]> {
+): Promise<
+  [
+    string,
+    boolean,
+    boolean,
+    boolean,
+    boolean,
+    boolean,
+    boolean,
+    boolean,
+    boolean
+  ]
+> {
   const start = performance.now();
 
   // prepare to fetch data from APIs
@@ -492,12 +504,18 @@ async function renderForecast(
   const dayStr = ["Today", "Tomorrow"];
 
   let nwsCounty = undefined;
+  let nwsForecastZone = undefined;
   if (!(nwsPointsData == undefined)) {
     nwsCounty = nwsPointsData.county.split("/");
     nwsCounty = nwsCounty ? nwsCounty[nwsCounty.length - 1] : undefined;
+    nwsForecastZone = nwsPointsData.forecastZone.split("/");
+    nwsForecastZone = nwsForecastZone
+      ? nwsForecastZone[nwsForecastZone.length - 1]
+      : undefined;
   }
 
   const nwsAlertRequestUrl = `https://api.weather.gov/alerts/active/zone/${nwsCounty}`;
+  const nwsObservationsRequestUrl = `https://api.weather.gov/zones/forecast/${nwsForecastZone}/observations?limit=1`;
   const nwsRequestInit = {
     headers: {
       accept: "application/geo+json",
@@ -514,9 +532,10 @@ async function renderForecast(
   // grab NWS, airnow forecasts if available
   let nwsAlertData = undefined;
   let nwsForecastData = undefined;
+  let nwsObservationsData = undefined;
   let airnowForecastData = undefined;
   try {
-    [nwsAlertData, nwsForecastData, airnowForecastData] =
+    [nwsAlertData, nwsForecastData, nwsObservationsData, airnowForecastData] =
       await Promise.allSettled([
         fetchProducts(
           nwsAlertRequestUrl,
@@ -525,6 +544,11 @@ async function renderForecast(
         ),
         fetchProducts(
           !(nwsPointsData == undefined) ? nwsPointsData.forecast : undefined,
+          nwsRequestInit,
+          !(nwsPointsData == undefined)
+        ),
+        fetchProducts(
+          nwsObservationsRequestUrl,
           nwsRequestInit,
           !(nwsPointsData == undefined)
         ),
@@ -556,6 +580,17 @@ async function renderForecast(
     typeof nwsForecastData.value === "object" &&
     nwsForecastData.value !== null &&
     "properties" in nwsForecastData.value;
+  const nwsObservationsRequestSuccess =
+    !(nwsObservationsData == undefined) &&
+    nwsObservationsData.status === "fulfilled";
+  const nwsObservationsSuccess =
+    !(nwsObservationsData == undefined) &&
+    nwsObservationsData.status === "fulfilled" &&
+    nwsObservationsData.value !== undefined &&
+    typeof nwsObservationsData.value === "object" &&
+    nwsObservationsData.value !== null &&
+    Array.isArray((nwsObservationsData.value as any).features) &&
+    (nwsObservationsData.value as any).features.length > 0;
   const airnowForecastRequestSuccess =
     !(airnowForecastData == undefined) &&
     airnowForecastData.status === "fulfilled";
@@ -578,6 +613,12 @@ async function renderForecast(
   } else {
     nwsForecastData = undefined;
   }
+  if (nwsObservationsSuccess) {
+    const value = (nwsObservationsData as PromiseFulfilledResult<any>).value;
+    nwsObservationsData = (value as { features: any[] }).features[0].properties;
+  } else {
+    nwsObservationsData = undefined;
+  }
   if (airnowForecastSuccess) {
     airnowForecastData = (airnowForecastData as PromiseFulfilledResult<any>)
       .value;
@@ -589,7 +630,7 @@ async function renderForecast(
   // build HTML content
   let html_content = "";
   if (!(nwsPointsData == undefined)) {
-    if (nwsForecastSuccess || nwsAlertSuccess) {
+    if (nwsForecastSuccess || nwsObservationsSuccess || nwsAlertSuccess) {
       html_content += `<h1>NWS Forecast 🌦️</h1><p> <a href="https://www.weather.gov/${nwsPointsData?.gridId}/">${nwsPointsData?.gridId} forecast office</a></p>`;
     }
     // parse alert data
@@ -626,6 +667,29 @@ async function renderForecast(
           new Date(alertInfo?.expires)
         )}</p></div></div>`;
       }
+    }
+    // parse observations data
+    if (nwsObservationsSuccess) {
+      const dewPointF =
+        (nwsObservationsData?.dewpoint.value * 9.0) / 5.0 + 32.0;
+
+      html_content += `<p> Conditions at <a href="https://forecast.weather.gov/zipcity.php?inputstring=${
+        nwsObservationsData?.stationId
+      }">${nwsObservationsData?.stationName}</a> as of ${user.dateFormat.format(
+        new Date(nwsObservationsData?.timestamp)
+      )}: ${nwsForecastIconToEmoji(
+        nwsObservationsData?.icon
+      )} ${nwsObservationsData?.textDescription}</p>`;
+      html_content += `<p> Temperature: ${floatFormat.format(
+        (nwsObservationsData?.temperature.value * 9.0) / 5.0 + 32.0
+      )} °F (${floatFormat.format(
+        nwsObservationsData?.temperature.value
+      )} °C)</p>`;
+      html_content += `<p> Relative humidity: ${dewPointEmoji(
+        dewPointF
+      )} ${floatFormat.format(
+        nwsObservationsData?.relativeHumidity.value
+      )}%, Dew point: ${floatFormat.format(dewPointF)} °F</p>`;
     }
     // parse forecast data
     if (nwsForecastSuccess) {
@@ -707,9 +771,11 @@ async function renderForecast(
     html_content,
     nwsAlertRequestSuccess,
     nwsForecastRequestSuccess,
+    nwsObservationsRequestSuccess,
     airnowForecastRequestSuccess,
     nwsAlertSuccess && Array.isArray(nwsAlertData),
     nwsForecastSuccess,
+    nwsObservationsSuccess,
     airnowForecastSuccess,
   ];
 }
@@ -724,9 +790,11 @@ function renderFooter(
   airnowSensorDataExists: boolean,
   nwsAlertRequestSuccess: boolean,
   nwsForecastRequestSuccess: boolean,
+  nwsObservationsRequestSuccess: boolean,
   airnowForecastRequestSuccess: boolean,
   nwsAlertDataExists: boolean,
   nwsForecastDataExists: boolean,
+  nwsObservationsDataExists: boolean,
   airnowForecastDataExists: boolean
 ): string {
   const start = performance.now();
@@ -756,9 +824,13 @@ function renderFooter(
     nwsAlertDataExists
   )}. NWS forecast ${timeoutStatusEmoji(
     nwsForecastRequestSuccess
-  )}${statusEmoji(nwsForecastDataExists)}. AirNow forecast ${timeoutStatusEmoji(
+  )}${statusEmoji(nwsForecastDataExists)}. NWS observations ${timeoutStatusEmoji(
+    nwsObservationsRequestSuccess
+  )}${statusEmoji(nwsObservationsDataExists)}. AirNow forecast ${timeoutStatusEmoji(
     airnowForecastRequestSuccess
-  )}${statusEmoji(airnowForecastDataExists)}. Airnow sensor ${timeoutStatusEmoji(
+  )}${statusEmoji(
+    airnowForecastDataExists
+  )}. Airnow sensor ${timeoutStatusEmoji(
     airnowSensorRequestSuccess
   )}${statusEmoji(airnowSensorDataExists)}. WAQI ${timeoutStatusEmoji(
     waqiRequestSuccess
@@ -849,9 +921,11 @@ export async function renderPage(
     forecastContent,
     nwsAlertRequestSuccess,
     nwsForecastRequestSuccess,
+    nwsObservationsRequestSuccess,
     airnowForecastRequestSuccess,
     nwsAlertDataExists,
     nwsForecastDataExists,
+    nwsObservationsDataExists,
     airnowForecastDataExists,
   ] = await renderForecast(env, nwsPointsData, airnowSensorData);
   writer.write(encoder.encode(forecastContent));
@@ -867,9 +941,11 @@ export async function renderPage(
         airnowSensorDataExists,
         nwsAlertRequestSuccess,
         nwsForecastRequestSuccess,
+        nwsObservationsRequestSuccess,
         airnowForecastRequestSuccess,
         nwsAlertDataExists,
         nwsForecastDataExists,
+        nwsObservationsDataExists,
         airnowForecastDataExists
       )
     )
