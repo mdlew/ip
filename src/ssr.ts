@@ -504,29 +504,18 @@ async function renderForecast(
   const dayStr = ["Today", "Tomorrow"];
 
   let nwsCounty = undefined;
-  // let nwsForecastZone = undefined;
+  let nwsForecastZone = undefined;
   if (!(nwsPointsData == undefined)) {
     nwsCounty = nwsPointsData.county.split("/");
     nwsCounty = nwsCounty ? nwsCounty[nwsCounty.length - 1] : undefined;
-    // nwsForecastZone = nwsPointsData.forecastZone.split("/");
-    // nwsForecastZone = nwsForecastZone
-    //   ? nwsForecastZone[nwsForecastZone.length - 1]
-    //   : undefined;
+    nwsForecastZone = nwsPointsData.forecastZone.split("/");
+    nwsForecastZone = nwsForecastZone
+      ? nwsForecastZone[nwsForecastZone.length - 1]
+      : undefined;
   }
-// As noted above, county based alerts are not mapped to zones but zone based alerts are mapped
-// to counties. The effect this has is for requests such as:
-// https://api.weather.gov/alerts/active?zone=MDZ013
-// or
-// https://api.weather.gov/alerts?zone=MDZ013
-// Will not contain county based products. However requests such as:
-// https://api.weather.gov/alerts?zone=MDC033
-// or
-// https://api.weather.gov/alerts/active?zone=MDC033
-// Will contain all county based alerts and all zone based alerts that are associated to the county or counties
-// requested. If there are multiple zones associated with that county, the response from API will include all
-// alerts for those zones.
+
   const nwsAlertRequestUrl = `https://api.weather.gov/alerts/active/zone/${nwsCounty}`;
-  const nwsObservationsRequestUrl = `https://api.weather.gov/zones/forecast/${nwsCounty}/observations?limit=1`;
+  const nwsObservationsRequestUrl = `https://api.weather.gov/zones/forecast/${nwsForecastZone}/observations?limit=1`;
   const nwsRequestInit = {
     headers: {
       accept: "application/geo+json",
