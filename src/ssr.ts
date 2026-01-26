@@ -42,6 +42,7 @@ import {
   timeoutStatusEmoji,
   toCSSGradient,
   userAgentIcon,
+  windDirectionToEmoji,
 } from "./utils.ts";
 
 interface Env {
@@ -74,6 +75,7 @@ const user = {
   }),
   latitude: "40.712778", // default to NYC
   longitude: "-74.006111", // default to NYC
+  miPerKm: 0.621371, // miles per kilometer
   nonce: "", // nonce for CSP
 };
 
@@ -119,8 +121,8 @@ function renderHead(): string {
   font-display: swap;
  }
  body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
-    hour
-  )};}
+   hour,
+ )};}
  img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%;}
  footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${textColor};}
@@ -190,7 +192,7 @@ function renderGeolocation(request: Request): string {
 
 async function renderWeather(
   request: Request,
-  env: Env
+  env: Env,
 ): Promise<
   [string, any, any, boolean, boolean, boolean, boolean, boolean, boolean]
 > {
@@ -230,13 +232,13 @@ async function renderWeather(
         nwsPointsRequestUrl,
         nwsRequestInit,
         typeof request.cf?.country === "string" &&
-          request.cf?.country.toUpperCase().includes("US")
+          request.cf?.country.toUpperCase().includes("US"),
       ),
       fetchProducts(
         airnowSensorRequestUrl,
         airnowRequestInit,
         typeof request.cf?.country === "string" &&
-          request.cf?.country.toUpperCase().includes("US")
+          request.cf?.country.toUpperCase().includes("US"),
       ),
     ]);
   } catch (e) {
@@ -321,7 +323,7 @@ async function renderWeather(
   const humidity = !(waqiData == undefined) ? waqiData.iaqi.h?.v : NaN;
   const dewPointF = calcDewPointF(tempC, humidity);
   const windSpeed = !(waqiData == undefined)
-    ? parseFloat(waqiData.iaqi.w?.v) * 2.23694
+    ? (parseFloat(waqiData.iaqi.w?.v) * 1000 * user.miPerKm) / 3600.0
     : NaN; // m/s to mph
   // compute heat index if it's warm enough
   const heatIndex = calcHeatIndex(tempF, humidity);
@@ -335,34 +337,34 @@ async function renderWeather(
   // ********************************************************************************************************************
   // build HTML content
   let html_content = `<h1>Current Conditions 🌡️</h1><p> Temperature: ${floatFormat.format(
-    tempF
+    tempF,
   )} °F (${floatFormat.format(
-    !(waqiData == undefined) ? waqiData.iaqi.t?.v : NaN
+    !(waqiData == undefined) ? waqiData.iaqi.t?.v : NaN,
   )} °C)</p>`;
   // if within range, print heat index
   //if (tempF > 80 && humidity > 40) {
   if (heatIndex > 80) {
     html_content += `<p> Feels like: ${floatFormat.format(
-      heatIndex
+      heatIndex,
     )} °F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
   }
   // if within range, print wind chill
   if (windChill < 40) {
     html_content += `<p> Feels like: ${floatFormat.format(
-      windChill
+      windChill,
     )} °F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
   }
 
   html_content += `<p> Relative humidity: ${dewPointEmoji(
-    dewPointF
+    dewPointF,
   )} ${humidity}&percnt;, <a href="https://www.weather.gov/tbw/dewpoint#dp">Dew point</a>: ${floatFormat.format(
-    dewPointF
+    dewPointF,
   )} °F</p>`;
   html_content += `<p> Wind speed: ${floatFormat.format(windSpeed)} mph</p>`;
 
   // air quality data
   html_content += `<p> Overall: ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.aqi : undefined
+    !(waqiData == undefined) ? waqiData.aqi : undefined,
   )} ${!(waqiData == undefined) ? waqiData.aqi + " AQI" : "N/A"} `;
   if (!(airnowOverall.AQI == undefined)) {
     html_content += ` (AirNow: ${aqiToEmoji(airnowOverall.AQI)} ${
@@ -372,7 +374,7 @@ async function renderWeather(
     html_content += `</p>`;
   }
   html_content += `<p> PM<sub>2.5</sub>: ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined
+    !(waqiData == undefined) ? waqiData.iaqi.pm25?.v : undefined,
   )} ${!(waqiData == undefined) ? waqiData.iaqi.pm25?.v + " AQI" : "N/A"} `;
   if (!(airnowPM25.AQI == undefined)) {
     html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${
@@ -388,7 +390,7 @@ async function renderWeather(
     html_content += `</p>`;
   }
   html_content += `<p> PM<sub>10</sub>: ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined
+    !(waqiData == undefined) ? waqiData.iaqi.pm10?.v : undefined,
   )} ${!(waqiData == undefined) ? waqiData.iaqi.pm10?.v + " AQI" : "N/A"} `;
   if (!(airnowPM10.AQI == undefined)) {
     html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${
@@ -398,13 +400,13 @@ async function renderWeather(
     }&ymax=${
       lat2y(parseFloat(user.latitude)) + 200000
     }&monitors=pm10&contours=ozonepm">AirNow</a>: ${aqiToEmoji(
-      airnowPM10.AQI
+      airnowPM10.AQI,
     )} ${airnowPM10.AQI} AQI, ${airnowPM10.category})</p>`;
   } else {
     html_content += `</p>`;
   }
   html_content += `<p> O<sub>3</sub> (ozone): ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined
+    !(waqiData == undefined) ? waqiData.iaqi.o3?.v : undefined,
   )} ${!(waqiData == undefined) ? waqiData.iaqi.o3?.v + " AQI" : "N/A"} `;
   if (!(airnowO3.AQI == undefined)) {
     html_content += ` (<a href="https://gispub.epa.gov/airnow/?showlegend=no&xmin=${
@@ -420,13 +422,13 @@ async function renderWeather(
     html_content += `</p>`;
   }
   html_content += `<p> NO<sub>2</sub> (nitrogen dioxide): ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.iaqi.no2?.v : undefined
+    !(waqiData == undefined) ? waqiData.iaqi.no2?.v : undefined,
   )} ${!(waqiData == undefined) ? waqiData.iaqi.no2?.v + " AQI" : "N/A"}</p>`;
   html_content += `<p> SO<sub>2</sub> (sulphur dioxide): ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.iaqi.so2?.v : undefined
+    !(waqiData == undefined) ? waqiData.iaqi.so2?.v : undefined,
   )} ${!(waqiData == undefined) ? waqiData.iaqi.so2?.v + " AQI" : "N/A"}</p>`;
   html_content += `<p> CO (carbon monoxide): ${aqiToEmoji(
-    !(waqiData == undefined) ? waqiData.iaqi.co?.v : undefined
+    !(waqiData == undefined) ? waqiData.iaqi.co?.v : undefined,
   )} ${!(waqiData == undefined) ? waqiData.iaqi.co?.v + " AQI" : "N/A"}</p>`;
 
   // add NWS radar loop if available, change URL every 2 minutes to avoid caching
@@ -436,7 +438,7 @@ async function renderWeather(
     }/standard"><img loading="lazy" src="/radarproxy/?id=${
       nwsPointsData?.radarStation
     }&refreshed=${Math.round(
-      Date.now() / 120000
+      Date.now() / 120000,
     )}" width="600" height="550" alt="radar loop"></a></p>`;
   }
 
@@ -447,7 +449,7 @@ async function renderWeather(
   if (!(airnowSensorData == undefined)) {
     const firstAirnowSensor = airnowSensorData[0];
     html_content += `<p> AirNow data from <a href="https://www.airnow.gov/?city=${encodeURIComponent(
-      firstAirnowSensor.ReportingArea
+      firstAirnowSensor.ReportingArea,
     )}&state=${firstAirnowSensor.StateCode}&country=USA">${
       firstAirnowSensor.ReportingArea
     }, ${firstAirnowSensor.StateCode}</a>, measured on ${
@@ -474,7 +476,7 @@ async function renderWeather(
 async function renderForecast(
   env: Env,
   nwsPointsData: any,
-  airnowSensorData: any
+  airnowSensorData: any,
 ): Promise<
   [
     string,
@@ -485,7 +487,7 @@ async function renderForecast(
     boolean,
     boolean,
     boolean,
-    boolean
+    boolean,
   ]
 > {
   const start = performance.now();
@@ -495,10 +497,10 @@ async function renderForecast(
   tomorrow.setDate(user.localizedDate.getDate() + 1);
   const airnowDateStr = [
     `${user.localizedDate.getFullYear()}-${intFormatTwoDigit.format(
-      user.localizedDate.getMonth() + 1
+      user.localizedDate.getMonth() + 1,
     )}-${intFormatTwoDigit.format(user.localizedDate.getDate())}`,
     `${tomorrow.getFullYear()}-${intFormatTwoDigit.format(
-      tomorrow.getMonth() + 1
+      tomorrow.getMonth() + 1,
     )}-${intFormatTwoDigit.format(tomorrow.getDate())}`,
   ];
   const dayStr = ["Today", "Tomorrow"];
@@ -540,22 +542,22 @@ async function renderForecast(
         fetchProducts(
           nwsAlertRequestUrl,
           nwsRequestInit,
-          !(nwsPointsData == undefined)
+          !(nwsPointsData == undefined),
         ),
         fetchProducts(
           !(nwsPointsData == undefined) ? nwsPointsData.forecast : undefined,
           nwsRequestInit,
-          !(nwsPointsData == undefined)
+          !(nwsPointsData == undefined),
         ),
         fetchProducts(
           nwsObservationsRequestUrl,
           nwsRequestInit,
-          !(nwsPointsData == undefined)
+          !(nwsPointsData == undefined),
         ),
         fetchProducts(
           airnowForecastRequestUrl,
           airnowRequestInit,
-          !(airnowSensorData == undefined)
+          !(airnowSensorData == undefined),
         ),
       ]);
   } catch (e) {
@@ -639,32 +641,32 @@ async function renderForecast(
       for (let i = 0; i < nwsAlertData.length; i++) {
         let alertInfo = nwsAlertData[i].properties;
         html_content += `<div><button class="collapsible"> ${nwsAlertResponseToEmoji(
-          alertInfo?.response
+          alertInfo?.response,
         )} ${alertInfo?.response}, ${nwsAlertSeverityToEmoji(
-          alertInfo?.severity
+          alertInfo?.severity,
         )} ${alertInfo?.severity}: ${nwsAlertEventToEmoji(
-          alertInfo?.headline
+          alertInfo?.headline,
         )} ${
           alertInfo?.headline
         }</button><div class="content"><h3> ${nwsAlertEventToEmoji(
-          alertInfo?.event
+          alertInfo?.event,
         )} ${alertInfo?.event}</h3><p>${alertInfo?.description.replace(
           /\n\n/g,
-          "</p><p>"
+          "</p><p>",
         )}</p><p>Instruction: ${alertInfo?.instruction}</p><p>Status: ${
           alertInfo?.status
         }, Urgency: ${alertInfo?.urgency}, Certainty: ${
           alertInfo?.certainty
         }</p><p>Onset: ${user.dateFormat.format(
-          new Date(alertInfo?.onset)
+          new Date(alertInfo?.onset),
         )}, Ends: ${user.dateFormat.format(
-          new Date(alertInfo?.ends)
+          new Date(alertInfo?.ends),
         )}</p><p>Affected areas: ${alertInfo?.areaDesc}</p><p>Sender: ${
           alertInfo?.senderName
         }, Sent: ${user.dateFormat.format(
-          new Date(alertInfo?.sent)
+          new Date(alertInfo?.sent),
         )}, Expires: ${user.dateFormat.format(
-          new Date(alertInfo?.expires)
+          new Date(alertInfo?.expires),
         )}</p></div></div>`;
       }
     }
@@ -676,20 +678,33 @@ async function renderForecast(
       html_content += `<p> Conditions at <a href="https://forecast.weather.gov/zipcity.php?inputstring=${
         nwsObservationsData?.stationId
       }">${nwsObservationsData?.stationName}</a> as of ${user.dateFormat.format(
-        new Date(nwsObservationsData?.timestamp)
+        new Date(nwsObservationsData?.timestamp),
       )}: ${nwsForecastIconToEmoji(
-        nwsObservationsData?.icon
+        nwsObservationsData?.icon,
       )} ${nwsObservationsData?.textDescription}</p>`;
       html_content += `<p> Temperature: ${floatFormat.format(
-        (nwsObservationsData?.temperature.value * 9.0) / 5.0 + 32.0
+        (nwsObservationsData?.temperature.value * 9.0) / 5.0 + 32.0,
       )} °F (${floatFormat.format(
-        nwsObservationsData?.temperature.value
+        nwsObservationsData?.temperature.value,
       )} °C)</p>`;
+      // if hot enough, print heat index
+      if ((nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0 > 80) {
+        html_content += `<p> Feels like: ${floatFormat.format(
+          (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0,
+        )} °F</p>`;
+      }
+      // if chilly enough, print wind chill
+      if ((nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0 < 40) {
+        html_content += `<p> Feels like: ${floatFormat.format(
+          (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0,
+        )} °F</p>`;
+      }
       html_content += `<p> Relative humidity: ${dewPointEmoji(
-        dewPointF
+        dewPointF,
       )} ${floatFormat.format(
-        nwsObservationsData?.relativeHumidity.value
+        nwsObservationsData?.relativeHumidity.value,
       )}%, Dew point: ${floatFormat.format(dewPointF)} °F</p>`;
+      html_content += `<p> Wind: ${windDirectionToEmoji(nwsObservationsData?.windDirection.value)} ${nwsObservationsData?.windSpeed.value * user.miPerKm} mph</p>`;
     }
     // parse forecast data
     if (nwsForecastSuccess) {
@@ -706,7 +721,7 @@ async function renderForecast(
   if (airnowForecastSuccess) {
     const firstAirnowForecast = airnowForecastData[0];
     html_content += `<h1>AirNow Forecast 🌬️</h1><p> <a href="https://www.airnow.gov/?city=${encodeURIComponent(
-      firstAirnowForecast.ReportingArea
+      firstAirnowForecast.ReportingArea,
     )}&state=${firstAirnowForecast.StateCode}&country=USA">${
       firstAirnowForecast.ReportingArea
     }, ${firstAirnowForecast.StateCode}</a></p>`;
@@ -737,7 +752,7 @@ async function renderForecast(
           html_content += `</p><p>`;
         }
         html_content += `${currAirnowData.ParameterName}: ${aqiCategoryToEmoji(
-          currAirnowData.Category.Number
+          currAirnowData.Category.Number,
         )}`;
         if (currAirnowData?.AQI > 0) {
           html_content += ` ${currAirnowData.AQI} AQI,`;
@@ -795,7 +810,7 @@ function renderFooter(
   nwsAlertDataExists: boolean,
   nwsForecastDataExists: boolean,
   nwsObservationsDataExists: boolean,
-  airnowForecastDataExists: boolean
+  airnowForecastDataExists: boolean,
 ): string {
   const start = performance.now();
 
@@ -819,21 +834,21 @@ function renderFooter(
     request.cf?.colo
   }</a>.</p>
   <p> NWS location ${timeoutStatusEmoji(nwsPointsRequestSuccess)}${statusEmoji(
-    nwsPointsDataExists
+    nwsPointsDataExists,
   )}. NWS alert ${timeoutStatusEmoji(nwsAlertRequestSuccess)}${statusEmoji(
-    nwsAlertDataExists
+    nwsAlertDataExists,
   )}. NWS forecast ${timeoutStatusEmoji(
-    nwsForecastRequestSuccess
+    nwsForecastRequestSuccess,
   )}${statusEmoji(nwsForecastDataExists)}. NWS observations ${timeoutStatusEmoji(
-    nwsObservationsRequestSuccess
+    nwsObservationsRequestSuccess,
   )}${statusEmoji(nwsObservationsDataExists)}. AirNow forecast ${timeoutStatusEmoji(
-    airnowForecastRequestSuccess
+    airnowForecastRequestSuccess,
   )}${statusEmoji(
-    airnowForecastDataExists
+    airnowForecastDataExists,
   )}. Airnow sensor ${timeoutStatusEmoji(
-    airnowSensorRequestSuccess
+    airnowSensorRequestSuccess,
   )}${statusEmoji(airnowSensorDataExists)}. WAQI ${timeoutStatusEmoji(
-    waqiRequestSuccess
+    waqiRequestSuccess,
   )}${statusEmoji(waqiDataExists)}.</p>
   <p> Script adapted from <a href="https://developers.cloudflare.com/workers/examples/">Cloudflare</a> and <a href="https://niksec.com/creating-a-simple-ip-check-tool-with-cloudflare-workers/">NikSec</a> examples.</p>
   <p> <a href="https://github.com/mdlew/ip">Fork this project on GitHub</a></p>
@@ -867,7 +882,7 @@ export async function renderPage(
   writer: WritableStreamDefaultWriter,
   request: Request,
   env: Env,
-  nonce: string
+  nonce: string,
 ): Promise<void> {
   const start = performance.now();
 
@@ -877,7 +892,7 @@ export async function renderPage(
       ? request.cf.timezone
       : "America/New_York";
   user.localizedDate = new Date(
-    new Date().toLocaleString("en-US", { timeZone: user.timezone })
+    new Date().toLocaleString("en-US", { timeZone: user.timezone }),
   );
   user.dateFormat = new Intl.DateTimeFormat("en-US", {
     year: "numeric",
@@ -946,9 +961,9 @@ export async function renderPage(
         nwsAlertDataExists,
         nwsForecastDataExists,
         nwsObservationsDataExists,
-        airnowForecastDataExists
-      )
-    )
+        airnowForecastDataExists,
+      ),
+    ),
   );
 
   // log performance

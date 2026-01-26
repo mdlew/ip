@@ -330,6 +330,15 @@ export function aqiCategoryToEmoji(category: number): string {
   }
 }
 
+export function windDirectionToEmoji(degrees: number): string {
+  if (degrees == undefined || isNaN(degrees)) {
+    return ""; // If undefined or NaN, return empty string
+  }
+  const directions = ["⬆️", "↗️", "➡️", "↘️", "⬇️", "↙️", "⬅️", "↖️"];
+  const index = Math.round(degrees / 45) % 8;
+  return directions[index];
+}
+
 export function nwsForecastIconToEmoji(iconText: string): string {
   if (iconText == undefined) {
     return ""; // If undefined, return empty string
