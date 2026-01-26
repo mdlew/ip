@@ -1,28 +1,18 @@
 /**
- * @file ssr.ts
- * @description Server-side rendering helpers that assemble an HTML page with IP geolocation,
- *   current observations, air quality, forecasts, and alerts. The primary public entrypoint
- *   is `renderPage`, which writes the generated HTML to a provided `WritableStream` writer.
+ * Server-side rendering module for assembling HTML pages with IP geolocation,
+ * weather observations, air quality data, forecasts, and alerts.
  *
- * Integrations:
- *  - WAQI (air quality), NWS (weather.gov) for forecasts/alerts, and AirNow for additional AQ data.
- *  - Uses Cloudflare Workers `Request.cf` metadata for client IP / location information.
+ * Integrates with:
+ * - WAQI (World Air Quality Index) for air quality data
+ * - NWS (National Weather Service) for forecasts and alerts
+ * - AirNow for additional air quality data
+ * - Cloudflare Workers Request.cf metadata for client location
  *
- * Types / exports:
- *  - `Env` interface: `{ WAQI_TOKEN, NWS_AGENT, AIRNOW_KEY, ASSETS }` (ASSETS is a fetcher binding).
- *  - `renderPage(writer, request, env, nonce): Promise<void>` — public renderer.
+ * Produces lightweight HTML with embedded styles, MapLibre map integration,
+ * and collapsible alert sections.
  *
- * Internal helpers (module-local, not exported): `renderHead`, `renderGeolocation`,
- * `renderWeather`, `renderForecast`, `renderFooter`.
- *
- * Notes:
- *  - Relies on utility functions from `src/utils.ts` (network helper, coordinate conversions,
- *    gradient generator, and emoji mappers).
- *  - Produces lightweight HTML with embedded styles, MapLibre integration, and simple
- *    collapsible alert sections.
- *
+ * @module
  * @author Matthew Lew
- * @date July 1, 2025
  */
 
 import {
@@ -45,11 +35,20 @@ import {
   windDirectionToEmoji,
 } from "./utils.ts";
 
+/**
+ * Environment bindings and secrets for the Cloudflare Worker.
+ *
+ * @interface
+ */
 interface Env {
+  /** Token for WAQI (World Air Quality Index) API */
   WAQI_TOKEN: string;
+  /** User agent string for NWS (National Weather Service) API */
   NWS_AGENT: string;
+  /** API key for AirNow air quality service */
   AIRNOW_KEY: string;
-  ASSETS: Fetcher; // Add ASSETS property to the Env interface
+  /** Fetcher binding for serving static assets */
+  ASSETS: Fetcher;
 }
 
 const intFormatTwoDigit = new Intl.NumberFormat("en-US", {
@@ -90,7 +89,13 @@ const timingLog = {
   renderTotal: NaN,
 };
 
-// build HTML *******************************************************
+/**
+ * Generates the HTML head section with styles and metadata.
+ * Adjusts colors based on time of day.
+ *
+ * @private
+ * @returns {string} HTML string containing the document head and opening body tag
+ */
 function renderHead(): string {
   const start = performance.now();
 
@@ -153,6 +158,13 @@ function renderHead(): string {
   return html_head;
 }
 
+/**
+ * Generates the IP geolocation section with map and location details.
+ *
+ * @private
+ * @param {Request} request - The incoming HTTP request with Cloudflare metadata
+ * @returns {string} HTML string containing geolocation information and MapLibre map
+ */
 function renderGeolocation(request: Request): string {
   const start = performance.now();
 
@@ -190,6 +202,16 @@ function renderGeolocation(request: Request): string {
   return html_content;
 }
 
+/**
+ * Fetches and renders current weather conditions and air quality data.
+ * Queries WAQI, NWS, and AirNow APIs concurrently.
+ *
+ * @private
+ * @param {Request} request - The incoming HTTP request
+ * @param {Env} env - Environment bindings with API tokens
+ * @returns {Promise<[string, any, any, boolean, boolean, boolean, boolean, boolean, boolean]>}
+ *   Tuple containing HTML content, API response data, and success flags
+ */
 async function renderWeather(
   request: Request,
   env: Env,
@@ -473,6 +495,17 @@ async function renderWeather(
   ];
 }
 
+/**
+ * Fetches and renders weather forecasts, alerts, and air quality forecasts.
+ * Queries NWS and AirNow APIs for forecast data.
+ *
+ * @private
+ * @param {Env} env - Environment bindings with API tokens
+ * @param {any} nwsPointsData - NWS points data from previous weather query
+ * @param {any} airnowSensorData - AirNow sensor data from previous weather query
+ * @returns {Promise<[string, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]>}
+ *   Tuple containing HTML content and success flags for various API calls
+ */
 async function renderForecast(
   env: Env,
   nwsPointsData: any,
@@ -795,6 +828,27 @@ async function renderForecast(
   ];
 }
 
+/**
+ * Generates the page footer with browser information and API status indicators.
+ *
+ * @private
+ * @param {Request} request - The incoming HTTP request
+ * @param {boolean} waqiRequestSuccess - Whether WAQI request completed
+ * @param {boolean} nwsPointsRequestSuccess - Whether NWS points request completed
+ * @param {boolean} airnowSensorRequestSuccess - Whether AirNow sensor request completed
+ * @param {boolean} waqiDataExists - Whether WAQI returned valid data
+ * @param {boolean} nwsPointsDataExists - Whether NWS points returned valid data
+ * @param {boolean} airnowSensorDataExists - Whether AirNow sensor returned valid data
+ * @param {boolean} nwsAlertRequestSuccess - Whether NWS alert request completed
+ * @param {boolean} nwsForecastRequestSuccess - Whether NWS forecast request completed
+ * @param {boolean} nwsObservationsRequestSuccess - Whether NWS observations request completed
+ * @param {boolean} airnowForecastRequestSuccess - Whether AirNow forecast request completed
+ * @param {boolean} nwsAlertDataExists - Whether NWS alerts returned valid data
+ * @param {boolean} nwsForecastDataExists - Whether NWS forecast returned valid data
+ * @param {boolean} nwsObservationsDataExists - Whether NWS observations returned valid data
+ * @param {boolean} airnowForecastDataExists - Whether AirNow forecast returned valid data
+ * @returns {string} HTML string containing the footer and closing tags
+ */
 function renderFooter(
   request: Request,
   waqiRequestSuccess: boolean,
@@ -877,7 +931,16 @@ for (i = 0; i < coll.length; i++) {
   return html_footer;
 }
 
-// render HTML
+/**
+ * Main entry point for server-side rendering.
+ * Orchestrates all rendering functions and streams HTML output to the writer.
+ *
+ * @param {WritableStreamDefaultWriter} writer - Stream writer for outputting HTML
+ * @param {Request} request - The incoming HTTP request with Cloudflare metadata
+ * @param {Env} env - Environment bindings with API tokens and secrets
+ * @param {nonce} nonce - Content Security Policy nonce for inline scripts
+ * @returns {Promise<void>} Promise that resolves when rendering is complete
+ */
 export async function renderPage(
   writer: WritableStreamDefaultWriter,
   request: Request,

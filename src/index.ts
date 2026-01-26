@@ -1,45 +1,33 @@
 /**
- * @file index.ts
- * @description Entry point for the Cloudflare Worker application. Handles incoming HTTP requests,
- *              routes them based on URL paths, and returns appropriate responses. Supports static asset
- *              delivery, radar image proxying (with WebP transformation), and IP geolocation with weather data.
+ * Entry point for the Cloudflare Worker application.
  *
+ * Handles incoming HTTP requests and routes them based on URL paths:
+ * - Serves static assets (favicon, fonts, robots.txt)
+ * - Proxies radar images with WebP transformation
+ * - Renders IP geolocation page with weather data
+ *
+ * All requests must use TLS 1.2+ and include appropriate security headers.
+ *
+ * @module
  * @author Matthew Lew
- * @date July 1, 2025
- *
- * @exports
- * @default {ExportedHandler<Env>} - Main fetch handler for the Cloudflare Worker.
- *
- * @interface Env
- * @property {string} WAQI_TOKEN - Token for WAQI API.
- * @property {string} NWS_AGENT - User agent for NWS API.
- * @property {string} AIRNOW_KEY - Key for AirNow API.
- * @property {Fetcher} ASSETS - Fetcher binding for static assets.
- *
- * @constants
- * @constant {string[]} STATIC_URLS - Paths for static assets.
- * @constant {string} RADAR_PROXY_URL - Path for radar image proxy requests.
- * @constant {string} WORKER_URL - Path for main IP geolocation and weather rendering.
- *
- * @functions
- * @function MethodNotAllowed - Returns a 405 response for unsupported HTTP methods.
- * @function fetch - Main handler for processing incoming requests.
- *
- * @features
- * - Sets security headers (Content-Security-Policy, X-Frame-Options, etc.).
- * - Proxies radar images with optional WebP transformation.
- * - Serves static assets from the ASSETS binding.
- * - Renders HTML page with IP geolocation and weather data via `renderPage`.
- * - Enforces TLS 1.2+ for all requests.
  */
 
 import { renderPage } from "./ssr.js";
 
+/**
+ * Environment bindings and secrets for the Cloudflare Worker.
+ *
+ * @interface
+ */
 export interface Env {
+  /** Token for WAQI (World Air Quality Index) API */
   WAQI_TOKEN: string;
+  /** User agent string for NWS (National Weather Service) API */
   NWS_AGENT: string;
+  /** API key for AirNow air quality service */
   AIRNOW_KEY: string;
-  ASSETS: Fetcher; // Add ASSETS property to the Env interface
+  /** Fetcher binding for serving static assets */
+  ASSETS: Fetcher;
 }
 
 const imgProxyLog = {
@@ -50,6 +38,12 @@ const imgProxyLog = {
   contentLength: 0,
 };
 
+/**
+ * Returns a 405 Method Not Allowed response.
+ *
+ * @param {Request} request - The incoming HTTP request
+ * @returns {Promise<Response>} Response indicating the method is not allowed
+ */
 async function MethodNotAllowed(request: Request) {
   console.log({ error: `Method ${request.method} not allowed` });
   return new Response(`Method ${request.method} not allowed.`, {
@@ -65,7 +59,7 @@ export default {
   async fetch(
     request: Request,
     env: Env,
-    ctx: ExecutionContext
+    ctx: ExecutionContext,
   ): Promise<Response> {
     // Response logic ******************************************************
     // Return a new Response based on a URL's pathname
@@ -213,14 +207,14 @@ export default {
       // Set Cache-Control headers, okay to cache for 1 year because URL refreshes every 2 minutes
       response.headers.set(
         "Cache-Control",
-        "public, max-age=31536000, immutable"
+        "public, max-age=31536000, immutable",
       );
       // Append to/Add Vary header so browser will cache response correctly
       response.headers.append("Vary", "Origin");
 
       imgProxyLog.contentType = response.headers.get("content-type") || "";
       imgProxyLog.contentLength = parseInt(
-        response.headers.get("content-length") || "0"
+        response.headers.get("content-length") || "0",
       );
       console.log(imgProxyLog);
       return response;

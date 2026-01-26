@@ -1,38 +1,16 @@
 /**
- * @file utils.ts
- * @description Collection of small utilities used across the app:
- *  - network helper with timeout/abort support,
- *  - Web Mercator coordinate conversions,
- *  - hour-based CSS background gradient data/formatter,
- *  - temperature/humidity helpers (heat index, dew point) and related emoji mapping,
- *  - air quality and NWS forecast/alert emoji mappers,
- *  - simple user-agent → icon mapper.
+ * Utility functions for the IP geolocation and weather application.
  *
- * Notes:
- *  - `fetchTimeout` is a local timeout constant used by `fetchProducts` (not exported).
- *  - `grads` is an exported array of gradient stop definitions (indexed by hour 0–23).
+ * Provides:
+ * - Network helper with timeout and abort support
+ * - Web Mercator coordinate conversions
+ * - Hour-based CSS background gradient generation
+ * - Temperature and humidity calculations (heat index, dew point)
+ * - Emoji mappers for air quality, weather conditions, and alerts
+ * - User agent detection helpers
  *
- * Exports:
- *  - `fetchProducts(url, options, fetchEnabled?)` : Promise<any | null>
- *  - `lat2y(lat)` : number
- *  - `lon2x(lon)` : number
- *  - `grads` : Array<Array<{color: string, position: number}>>
- *  - `toCSSGradient(hour)` : string
- *  - `calcHeatIndex(tempF, humidity)` : number
- *  - `calcDewPointF(tempC, humidity)` : number
- *  - `dewPointEmoji(dewPointF)` : string
- *  - `statusEmoji(fetchSuccess)` : string
- *  - `timeoutStatusEmoji(fetchSuccess)` : string
- *  - `aqiToEmoji(AQI)` : string
- *  - `aqiCategoryToEmoji(category)` : string
- *  - `nwsForecastIconToEmoji(iconText)` : string
- *  - `nwsAlertSeverityToEmoji(alertSeverity)` : string
- *  - `nwsAlertResponseToEmoji(response)` : string
- *  - `nwsAlertEventToEmoji(event)` : string
- *  - `userAgentIcon(userAgentStr)` : string
- *
+ * @module
  * @author Matthew Lew
- * @date July 1, 2025
  */
 
 // The `fetchTimeout` constant defines the maximum time (in milliseconds) to wait for a response from an API request.
@@ -46,7 +24,7 @@ const fetchTimeout = 3000;
 export async function fetchProducts(
   url: string,
   options: RequestInit,
-  fetchEnabled: boolean = true
+  fetchEnabled: boolean = true,
 ) {
   if (!fetchEnabled) {
     return null;
@@ -55,7 +33,7 @@ export async function fetchProducts(
     const controller = new AbortController();
     const timeoutID = setTimeout(
       () => controller.abort(`Abort Error (timeout ${fetchTimeout} ms)`),
-      fetchTimeout
+      fetchTimeout,
     );
 
     // after this line, our function will wait for the `fetch()` call to be settled
@@ -90,18 +68,41 @@ export async function fetchProducts(
   }
 }
 
-// web mercator conversion (degrees to meters) https://wiki.openstreetmap.org/wiki/Mercator
+/**
+ * Mathematical constants for Web Mercator projection.
+ * @see https://wiki.openstreetmap.org/wiki/Mercator
+ * @private
+ */
 const PI = Math.PI;
 const DEG2RAD = PI / 180;
 const R = 6378137.0;
+
+/**
+ * Converts latitude in degrees to Web Mercator y coordinate in meters.
+ *
+ * @param {number} lat - Latitude in decimal degrees
+ * @returns {number} Y coordinate in meters
+ */
 export function lat2y(lat: number): number {
   return Math.log(Math.tan(PI / 4 + (lat * DEG2RAD) / 2)) * R;
 }
+
+/**
+ * Converts longitude in degrees to Web Mercator x coordinate in meters.
+ *
+ * @param {number} lon - Longitude in decimal degrees
+ * @returns {number} X coordinate in meters
+ */
 export function lon2x(lon: number): number {
   return lon * DEG2RAD * R;
 }
 
-// gradient data for background color
+/**
+ * Background gradient definitions indexed by hour (0-23).
+ * Each entry contains gradient stops with colors and positions for time-based backgrounds.
+ *
+ * @constant {Array<Array<{color: string, position: number}>>}
+ */
 export const grads = [
   [
     { color: "#00000c", position: 0 },
@@ -216,7 +217,12 @@ export const grads = [
   ],
 ];
 
-// Converts a given hour (0-23) to a CSS linear gradient string
+/**
+ * Converts an hour value to a CSS linear gradient string.
+ *
+ * @param {number} hour - Hour of day (0-23)
+ * @returns {string} CSS linear-gradient string for the background
+ */
 export function toCSSGradient(hour: number): string {
   let css = "linear-gradient(to bottom,";
   const data = grads[hour];
@@ -229,6 +235,14 @@ export function toCSSGradient(hour: number): string {
   return css + ")";
 }
 
+/**
+ * Calculates the heat index (apparent temperature) from temperature and humidity.
+ * Uses the National Weather Service heat index formula with corrections.
+ *
+ * @param {number} tempF - Temperature in Fahrenheit
+ * @param {number} humidity - Relative humidity as a percentage (0-100)
+ * @returns {number} Heat index in Fahrenheit
+ */
 export function calcHeatIndex(tempF: number, humidity: number): number {
   // Calculate the heat index using the formula
   let heatIndex =
@@ -255,16 +269,33 @@ export function calcHeatIndex(tempF: number, humidity: number): number {
   return heatIndex;
 }
 
+/**
+ * Calculates the dew point temperature from temperature and relative humidity.
+ * Uses the formula from Lawrence MG (2005) equation 11.
+ *
+ * @see https://doi.org/10.1175/BAMS-86-2-225
+ * @param {number} tempC - Temperature in Celsius
+ * @param {number} humidity - Relative humidity as a percentage (0-100)
+ * @returns {number} Dew point in Fahrenheit
+ */
 export function calcDewPointF(tempC: number, humidity: number): number {
-  // Calculate the dew point using the formula from Lawrence MG (2005) The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: A Simple Conversion and Applications. Bulletin of the American Meteorological Society, 86(2):225–234. https://doi.org/10.1175/BAMS-86-2-225
-  // Eq 11:
   const tempK = tempC + 273.15; // Convert Celsius to Kelvin
   const dewPointK =
     tempK /
     (1 - (tempK * Math.log(humidity / 100)) / ((2.501 * 10 ** 6) / 461.5));
-  return (dewPointK - 273.15) * (9 / 5) + 32; // Convert to Fahrenheit
+  const tempK = tempC + 273.15;
+  const dewPointK =
+    tempK /
+    (1 - (tempK * Math.log(humidity / 100)) / ((2.501 * 10 ** 6) / 461.5));
+  return (dewPointK - 273.15) * (9 / 5) + 32;
 }
 
+/**
+ * Returns an emoji representing the comfort level based on dew point.
+ *
+ * @param {number} dewPointF - Dew point in Fahrenheit
+ * @returns {string} Emoji representing comfort level (desert, beach, water drops)
+ */
 export function dewPointEmoji(dewPointF: number): string {
   if (isNaN(dewPointF)) {
     return "";
@@ -279,6 +310,12 @@ export function dewPointEmoji(dewPointF: number): string {
   }
 }
 
+/**
+ * Returns a success or error emoji based on fetch status.
+ *
+ * @param {boolean} fetchSuccess - Whether the fetch was successful
+ * @returns {string} Check mark for success, X for error
+ */
 export function statusEmoji(fetchSuccess: boolean): string {
   if (fetchSuccess) {
     return "✅"; // Success
@@ -286,6 +323,13 @@ export function statusEmoji(fetchSuccess: boolean): string {
     return "❌"; // Error
   }
 }
+
+/**
+ * Returns a timeout emoji if fetch failed, empty string if successful.
+ *
+ * @param {boolean} fetchSuccess - Whether the fetch was successful
+ * @returns {string} Hourglass emoji for timeout, empty string for success
+ */
 export function timeoutStatusEmoji(fetchSuccess: boolean): string {
   if (fetchSuccess) {
     return ""; // Success
@@ -294,6 +338,12 @@ export function timeoutStatusEmoji(fetchSuccess: boolean): string {
   }
 }
 
+/**
+ * Converts an Air Quality Index value to a colored circle emoji.
+ *
+ * @param {number} AQI - Air Quality Index value
+ * @returns {string} Colored circle emoji (green=good, yellow=moderate, etc.)
+ */
 export function aqiToEmoji(AQI: number): string {
   if (AQI == undefined) {
     return ""; // If undefined, return empty string
@@ -312,6 +362,12 @@ export function aqiToEmoji(AQI: number): string {
   }
 }
 
+/**
+ * Converts an AQI category number (1-6) to a colored circle emoji.
+ *
+ * @param {number} category - AQI category number (1=Good, 2=Moderate, 3=USG, 4=Unhealthy, 5=Very Unhealthy, 6=Hazardous)
+ * @returns {string} Colored circle emoji representing the category
+ */
 export function aqiCategoryToEmoji(category: number): string {
   if (category == undefined) {
     return ""; // If undefined, return empty string
@@ -330,15 +386,36 @@ export function aqiCategoryToEmoji(category: number): string {
   }
 }
 
+/**
+ * Converts wind direction in degrees to an arrow emoji with cardinal direction.
+ *
+ * @param {number} degrees - Wind direction in degrees (0-360)
+ * @returns {string} Arrow emoji with cardinal direction (e.g., "⬆️ N", "➡️ E")
+ */
 export function windDirectionToEmoji(degrees: number): string {
   if (degrees == undefined || isNaN(degrees)) {
     return ""; // If undefined or NaN, return empty string
   }
-  const directions = ["⬆️", "↗️", "➡️", "↘️", "⬇️", "↙️", "⬅️", "↖️"];
+  const directions = [
+    "⬆️ N",
+    "↗️ NE",
+    "➡️ E",
+    "↘️ SE",
+    "⬇️ S",
+    "↙️ SW",
+    "⬅️ W",
+    "↖️ NW",
+  ];
   const index = Math.round(degrees / 45) % 8;
   return directions[index];
 }
 
+/**
+ * Converts NWS forecast icon URL or text to weather emoji.
+ *
+ * @param {string} iconText - NWS icon URL or description text
+ * @returns {string} Weather emoji(s) representing the forecast conditions
+ */
 export function nwsForecastIconToEmoji(iconText: string): string {
   if (iconText == undefined) {
     return ""; // If undefined, return empty string
@@ -426,6 +503,12 @@ export function nwsForecastIconToEmoji(iconText: string): string {
   return forecastIcons;
 }
 
+/**
+ * Converts NWS alert severity level to a colored emoji indicator.
+ *
+ * @param {string} alertSeverity - Alert severity (Minor, Moderate, Severe, Extreme)
+ * @returns {string} Colored circle or alert emoji representing severity
+ */
 export function nwsAlertSeverityToEmoji(alertSeverity: string): string {
   if (alertSeverity == undefined) {
     return ""; // If undefined, return empty string
@@ -444,6 +527,12 @@ export function nwsAlertSeverityToEmoji(alertSeverity: string): string {
   }
 }
 
+/**
+ * Converts NWS alert response type to representative emoji.
+ *
+ * @param {string} response - Alert response type (Monitor, Prepare, Evacuate, Shelter, etc.)
+ * @returns {string} Emoji(s) representing the recommended response action
+ */
 export function nwsAlertResponseToEmoji(response: string): string {
   if (response == undefined) {
     return ""; // If undefined, return empty string
@@ -470,6 +559,13 @@ export function nwsAlertResponseToEmoji(response: string): string {
   }
 }
 
+/**
+ * Converts NWS alert event type to weather-related emoji.
+ * Supports multiple weather conditions and alert types.
+ *
+ * @param {string} event - Alert event description or headline
+ * @returns {string} Emoji(s) representing the weather event and alert level
+ */
 export function nwsAlertEventToEmoji(event: string): string {
   if (event == undefined) {
     return ""; // If undefined, return empty string
@@ -572,6 +668,12 @@ export function nwsAlertEventToEmoji(event: string): string {
   return eventIcons;
 }
 
+/**
+ * Detects operating system and device type from user agent string.
+ *
+ * @param {userAgentStr} userAgentStr - Browser user agent string
+ * @returns {string} Emoji(s) representing the detected OS and device type
+ */
 export function userAgentIcon(userAgentStr: string): string {
   if (userAgentStr == undefined) {
     return ""; // If undefined, return empty string
