@@ -704,7 +704,7 @@ async function renderForecast(
       )} ${floatFormat.format(
         nwsObservationsData?.relativeHumidity.value,
       )}%, Dew point: ${floatFormat.format(dewPointF)} °F</p>`;
-      html_content += `<p> Wind: ${windDirectionToEmoji(nwsObservationsData?.windDirection.value)} ${nwsObservationsData?.windSpeed.value * user.miPerKm} mph</p>`;
+      html_content += `<p> Wind: ${windDirectionToEmoji(nwsObservationsData?.windDirection.value)} ${floatFormat.format(nwsObservationsData?.windSpeed.value * user.miPerKm)} mph</p>`;
     }
     // parse forecast data
     if (nwsForecastSuccess) {
