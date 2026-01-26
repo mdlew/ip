@@ -345,7 +345,7 @@ async function renderWeather(
   const humidity = !(waqiData == undefined) ? waqiData.iaqi.h?.v : NaN;
   const dewPointF = calcDewPointF(tempC, humidity);
   const windSpeed = !(waqiData == undefined)
-    ? (parseFloat(waqiData.iaqi.w?.v) / 1000 * user.miPerKm) * 3600.0
+    ? (parseFloat(waqiData.iaqi.w?.v) / 1000) * user.miPerKm * 3600.0
     : NaN; // m/s to mph
   // compute heat index if it's warm enough
   const heatIndex = calcHeatIndex(tempF, humidity);
@@ -707,6 +707,10 @@ async function renderForecast(
     if (nwsObservationsSuccess) {
       const dewPointF =
         (nwsObservationsData?.dewpoint.value * 9.0) / 5.0 + 32.0;
+      const heatIndex =
+        (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0;
+      const windChill =
+        (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0;
 
       html_content += `<p> Conditions at <a href="https://forecast.weather.gov/zipcity.php?inputstring=${
         nwsObservationsData?.stationId
@@ -721,15 +725,15 @@ async function renderForecast(
         nwsObservationsData?.temperature.value,
       )} °C)</p>`;
       // if hot enough, print heat index
-      if ((nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0 > 80) {
+      if (heatIndex > 80) {
         html_content += `<p> Feels like: ${floatFormat.format(
-          (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0,
+          heatIndex,
         )} °F</p>`;
       }
       // if chilly enough, print wind chill
-      if ((nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0 < 40) {
+      if (windChill < 40) {
         html_content += `<p> Feels like: ${floatFormat.format(
-          (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0,
+          windChill,
         )} °F</p>`;
       }
       html_content += `<p> Relative humidity: ${dewPointEmoji(
