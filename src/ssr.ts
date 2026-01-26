@@ -345,7 +345,7 @@ async function renderWeather(
   const humidity = !(waqiData == undefined) ? waqiData.iaqi.h?.v : NaN;
   const dewPointF = calcDewPointF(tempC, humidity);
   const windSpeed = !(waqiData == undefined)
-    ? (parseFloat(waqiData.iaqi.w?.v) * 1000 * user.miPerKm) / 3600.0
+    ? (parseFloat(waqiData.iaqi.w?.v) / 1000 * user.miPerKm) * 3600.0
     : NaN; // m/s to mph
   // compute heat index if it's warm enough
   const heatIndex = calcHeatIndex(tempF, humidity);
