@@ -283,10 +283,6 @@ export function calcDewPointF(tempC: number, humidity: number): number {
   const dewPointK =
     tempK /
     (1 - (tempK * Math.log(humidity / 100)) / ((2.501 * 10 ** 6) / 461.5));
-  const tempK = tempC + 273.15;
-  const dewPointK =
-    tempK /
-    (1 - (tempK * Math.log(humidity / 100)) / ((2.501 * 10 ** 6) / 461.5));
   return (dewPointK - 273.15) * (9 / 5) + 32;
 }
 
