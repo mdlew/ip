@@ -714,7 +714,7 @@ async function renderForecast(
 
       html_content += `<p> Conditions at <a href="https://forecast.weather.gov/zipcity.php?inputstring=${
         nwsObservationsData?.stationId
-      }">${nwsObservationsData?.stationName}</a> as of ${user.dateFormat.format(
+      }">${nwsObservationsData?.stationName} (${nwsObservationsData?.stationId})</a> as of ${user.dateFormat.format(
         new Date(nwsObservationsData?.timestamp),
       )}: ${nwsForecastIconToEmoji(
         nwsObservationsData?.icon,
