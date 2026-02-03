@@ -50,7 +50,8 @@ This is a serverless IP geolocation service with real-time weather, air quality,
 
 ### Documentation
 - Use JSDoc comments for functions, interfaces, and complex logic
-- Include `@param`, `@returns`, and `@interface` tags where appropriate
+- Include `@param`, `@returns`, and `@module` tags where appropriate
+- Use TypeScript interfaces for type definitions
 - Add module-level documentation for file purpose
 
 ## Development Workflow
