@@ -707,10 +707,10 @@ async function renderForecast(
     if (nwsObservationsSuccess) {
       const dewPointF =
         (nwsObservationsData?.dewpoint.value * 9.0) / 5.0 + 32.0;
-      const heatIndex =
-        (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0;
-      const windChill =
-        (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0;
+      const heatIndex = (nwsObservationsData?.heatIndex.value != null) ?
+        (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0 : NaN;
+      const windChill = (nwsObservationsData?.windChill.value != null) ?
+        (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0 : NaN;
 
       html_content += `<p> Conditions at <a href="https://forecast.weather.gov/zipcity.php?inputstring=${
         nwsObservationsData?.stationId
@@ -725,13 +725,13 @@ async function renderForecast(
         nwsObservationsData?.temperature.value,
       )} °C)</p>`;
       // if hot enough, print heat index
-      if (heatIndex > 80) {
+      if (!isNaN(heatIndex) && heatIndex > 80) {
         html_content += `<p> Feels like: ${floatFormat.format(
           heatIndex,
         )} °F</p>`;
       }
       // if chilly enough, print wind chill
-      if (windChill < 40) {
+      if (!isNaN(windChill) && windChill < 40) {
         html_content += `<p> Feels like: ${floatFormat.format(
           windChill,
         )} °F</p>`;
