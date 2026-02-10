@@ -706,11 +706,21 @@ async function renderForecast(
     // parse observations data
     if (nwsObservationsSuccess) {
       const dewPointF =
-        (nwsObservationsData?.dewpoint.value * 9.0) / 5.0 + 32.0;
-      const heatIndex = (nwsObservationsData?.heatIndex.value != null) ?
-        (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0 : NaN;
-      const windChill = (nwsObservationsData?.windChill.value != null) ?
-        (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0 : NaN;
+        nwsObservationsData?.dewpoint.value != null
+          ? (nwsObservationsData?.dewpoint.value * 9.0) / 5.0 + 32.0
+          : NaN;
+      const heatIndex =
+        nwsObservationsData?.heatIndex.value != null
+          ? (nwsObservationsData?.heatIndex.value * 9.0) / 5.0 + 32.0
+          : NaN;
+      const windChill =
+        nwsObservationsData?.windChill.value != null
+          ? (nwsObservationsData?.windChill.value * 9.0) / 5.0 + 32.0
+          : NaN;
+      const windSpeed =
+        nwsObservationsData?.windSpeed.value != null
+          ? nwsObservationsData?.windSpeed.value * user.miPerKm
+          : NaN;
 
       html_content += `<p> Conditions at <a href="https://forecast.weather.gov/zipcity.php?inputstring=${
         nwsObservationsData?.stationId
@@ -741,7 +751,9 @@ async function renderForecast(
       )} ${floatFormat.format(
         nwsObservationsData?.relativeHumidity.value,
       )}%, Dew point: ${floatFormat.format(dewPointF)} °F</p>`;
-      html_content += `<p> Wind: ${windDirectionToEmoji(nwsObservationsData?.windDirection.value)} ${floatFormat.format(nwsObservationsData?.windSpeed.value * user.miPerKm)} mph</p>`;
+      if (!isNaN(windSpeed)) {
+        html_content += `<p> Wind: ${windDirectionToEmoji(nwsObservationsData?.windDirection.value)} ${floatFormat.format(windSpeed)} mph</p>`;
+      }
     }
     // parse forecast data
     if (nwsForecastSuccess) {
