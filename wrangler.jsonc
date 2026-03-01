@@ -1,0 +1,50 @@
+{
+  // Schema for type checking and IntelliSense
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // Top-level configuration
+  "name": "ip",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-01",
+  "workers_dev": false,
+
+  "routes": [
+    {
+      "pattern": "ip.matthewlew.info",
+      "custom_domain": true
+    },
+    {
+      "pattern": "ip.lewlab.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "ip.madeleinelew.me",
+      "custom_domain": true
+    },
+    {
+      "pattern": "ip.bennettlew.net",
+      "custom_domain": true
+    }
+  ],
+
+  // Static assets configuration
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": false,
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+
+  // Image transformation binding
+  "images": {
+    "binding": "IMAGES"
+  },
+
+  // Workers Logs
+  // Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+  // Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+  "observability": {
+    "enabled": true
+  }
+}
