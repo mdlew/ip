@@ -111,9 +111,9 @@ export default {
 			  */
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
-      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": 'require-corp;',
+      "Cross-Origin-Opener-Policy": 'same-site;',
       "Cross-Origin-Resource-Policy": "same-site",
-      "Cross-Origin-Embedder-Policy": "require-corp",
       "Cache-Control": "no-cache, no-store, must-revalidate",
       link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect",
     });
@@ -135,18 +135,15 @@ export default {
       });
     }
 
-    // Check if the request is secure (HTTPS) and TLS version is 1.2 or higher, return 403 if not
+    // Check if the request is secure (HTTPS) and TLS version is 1.3 or higher, return 403 if not
     if (
       typeof request.cf?.tlsVersion !== "string" ||
-      !(
-        request.cf.tlsVersion.toUpperCase().includes("TLSV1.2") ||
-        request.cf.tlsVersion.toUpperCase().includes("TLSV1.3")
-      )
+      !request.cf.tlsVersion.toUpperCase().includes("TLSV1.3")
     ) {
       console.log({
         error: `TLS version error: "${request.cf?.tlsVersion}"`,
       });
-      return new Response("Please use TLS version 1.2 or higher.", {
+      return new Response("Please use TLS version 1.3 or higher.", {
         status: 403,
         statusText: "Forbidden",
       });
