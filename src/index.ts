@@ -118,6 +118,23 @@ export default {
       link: "<https://unpkg.com>; rel=preconnect, <https://tiles.stadiamaps.com>; rel=preconnect",
     });
 
+    // Check if the request is HTTP/2 or HTTP/3, return 403 if not
+    if (
+      typeof request.cf?.httpProtocol !== "string" ||
+      !(
+        request.cf.httpProtocol.toUpperCase().includes("HTTP/2") ||
+        request.cf.httpProtocol.toUpperCase().includes("HTTP/3")
+      )
+    ) {
+      console.log({
+        error: `HTTP protocol error: "${request.cf?.httpProtocol}"`,
+      });
+      return new Response("Please use HTTP/2 or HTTP/3.", {
+        status: 403,
+        statusText: "Forbidden",
+      });
+    }
+
     // Check if the request is secure (HTTPS) and TLS version is 1.2 or higher, return 403 if not
     if (
       typeof request.cf?.tlsVersion !== "string" ||
