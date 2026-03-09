@@ -100,11 +100,22 @@ function renderHead(): string {
   const start = performance.now();
 
   const hour = user.localizedDate.getHours();
-  let accentColor = "#f6821f";
+  // Night-time defaults (hours 0–6 and 18–23): white text on dark gradient.
+  let accentColor = "white";
   let textColor = "white";
-  if (hour >= 7 && hour < 13) {
+  // Semi-transparent container overlay guarantees the chosen textColor achieves
+  // ≥4.5:1 (normal text) against the worst-case blended colour across all 24
+  // gradient palettes.  45% black darkens warm sunset stops enough for white text
+  // to pass; 25% white lifts the darker noon-to-dusk stops enough for black text.
+  let containerBg = "rgba(0, 0, 0, 0.45)";
+  // Focus ring must contrast with both the dark button bg (#8A3B12) and the overlay.
+  let focusColor = "white";
+  if (hour >= 7 && hour < 18) {
+    // Daytime (7 am – 5 pm): black text on lighter gradient.
     accentColor = "black";
     textColor = "black";
+    containerBg = "rgba(255, 255, 255, 0.25)";
+    focusColor = "black";
   }
 
   const html_style = `@font-face {
@@ -128,10 +139,11 @@ function renderHead(): string {
  body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
    hour,
  )};}
- img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%;}
- footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem);}
- h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${textColor};}
- .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;  outline: none;}
+ img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%; background-color: ${containerBg};}
+ footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem); background-color: ${containerBg};}
+ h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${accentColor}; text-decoration: underline dotted;}
+ .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
+ .collapsible:focus-visible {outline: 3px solid ${focusColor}; outline-offset: 2px;}
  .active, .collapsible:hover {background-color: #59230B;}
  .collapsible:after {content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
  .content {padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
@@ -673,7 +685,7 @@ async function renderForecast(
       html_content += `<h2>⚠️ Alerts</h2>`;
       for (let i = 0; i < nwsAlertData.length; i++) {
         let alertInfo = nwsAlertData[i].properties;
-        html_content += `<div><button class="collapsible"> ${nwsAlertResponseToEmoji(
+        html_content += `<div><button class="collapsible" aria-expanded="false" aria-controls="nws-alert-${i}"> ${nwsAlertResponseToEmoji(
           alertInfo?.response,
         )} ${alertInfo?.response}, ${nwsAlertSeverityToEmoji(
           alertInfo?.severity,
@@ -681,7 +693,7 @@ async function renderForecast(
           alertInfo?.headline,
         )} ${
           alertInfo?.headline
-        }</button><div class="content"><h3> ${nwsAlertEventToEmoji(
+        }</button><div class="content" id="nws-alert-${i}"><h3> ${nwsAlertEventToEmoji(
           alertInfo?.event,
         )} ${alertInfo?.event}</h3><p>${alertInfo?.description.replace(
           /\n\n/g,
@@ -821,7 +833,7 @@ async function renderForecast(
       ) {
         html_content += `<p> <a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></p>`;
       } else {
-        html_content += `<div><button class="collapsible">Discussion</button><div class="content"><p>${
+        html_content += `<div><button class="collapsible" aria-expanded="false" aria-controls="airnow-discussion">Discussion</button><div class="content" id="airnow-discussion"><p>${
           typeof firstAirnowForecast.Discussion === "string"
             ? firstAirnowForecast.Discussion.replace(/\n\n/g, "</p><p>")
             : ""
@@ -931,6 +943,8 @@ var i;
 for (i = 0; i < coll.length; i++) {
   coll[i].addEventListener("click", function() {
     this.classList.toggle("active");
+    var expanded = this.getAttribute("aria-expanded") === "true";
+    this.setAttribute("aria-expanded", String(!expanded));
     var content = this.nextElementSibling;
     if (content.style.maxHeight){
       content.style.maxHeight = null;
