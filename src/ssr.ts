@@ -834,7 +834,7 @@ async function renderForecast(
       ) {
         html_content += `<p> <a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></p>`;
       } else {
-        html_content += `<div><button class="collapsible" aria-expanded="false" aria-controls="airnow-discussion">Discussion</button><div class="content" id="airnow-discussion"><p>${
+        html_content += `<div class="container"><button class="collapsible" aria-expanded="false" aria-controls="airnow-discussion">Discussion</button><div class="content" id="airnow-discussion"><p>${
           typeof firstAirnowForecast.Discussion === "string"
             ? firstAirnowForecast.Discussion.replace(/\n\n/g, "</p><p>")
             : ""
