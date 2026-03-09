@@ -147,6 +147,7 @@ function renderHead(): string {
  .active, .collapsible:hover {background-color: #59230B;}
  .collapsible:after {content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
  .content {padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
+ .container { display: inline-block; padding: 6px; } .container img { display: block; } .container:focus-visible { outline: 3px solid ${accentColor}; outline-offset: 2px; border-radius: 6px; }
  #map {width: 100%; height: 350px;}`;
   const html_head = `<!DOCTYPE html>
 <html lang="en">
@@ -467,7 +468,7 @@ async function renderWeather(
 
   // add NWS radar loop if available, change URL every 2 minutes to avoid caching
   if (!(nwsPointsData == undefined)) {
-    html_content += `<p> <a href="https://radar.weather.gov/station/${
+    html_content += `<p> <a class="container" href="https://radar.weather.gov/station/${
       nwsPointsData?.radarStation
     }/standard"><img loading="lazy" src="/radarproxy/?id=${
       nwsPointsData?.radarStation
@@ -685,7 +686,7 @@ async function renderForecast(
       html_content += `<h2>⚠️ Alerts</h2>`;
       for (let i = 0; i < nwsAlertData.length; i++) {
         let alertInfo = nwsAlertData[i].properties;
-        html_content += `<div><button class="collapsible" aria-expanded="false" aria-controls="nws-alert-${i}"> ${nwsAlertResponseToEmoji(
+        html_content += `<div class="container"><button class="collapsible" aria-expanded="false" aria-controls="nws-alert-${i}"> ${nwsAlertResponseToEmoji(
           alertInfo?.response,
         )} ${alertInfo?.response}, ${nwsAlertSeverityToEmoji(
           alertInfo?.severity,
