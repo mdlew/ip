@@ -17,14 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
         with:
-          version: latest #10
-          run_install: |
-            - recursive: true
-              args: [--force, --fix-lockfile, --no-frozen-lockfile]
-            - args: [--global, typescript]
-        
+          version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --force --fix-lockfile --no-frozen-lockfile
+
       - name: Generate types
         run: pnpm run generate-types
 
