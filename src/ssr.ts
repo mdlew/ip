@@ -90,6 +90,49 @@ const timingLog = {
 };
 
 /**
+ * Extracts a normalized AirNow parameter name from different payload shapes.
+ *
+ * @param {any} entry - AirNow payload entry
+ * @returns {string | undefined} Upper-cased parameter name when available
+ */
+function airnowParameter(entry: any): string | undefined {
+  const parameter = entry?.ParameterName ?? entry?.Parameter;
+  return typeof parameter === "string" ? parameter.toUpperCase() : undefined;
+}
+
+/**
+ * Extracts AirNow AQI category name from different payload shapes.
+ *
+ * @param {any} entry - AirNow payload entry
+ * @returns {string | undefined} Category name when available
+ */
+function airnowCategoryName(entry: any): string | undefined {
+  if (typeof entry?.Category === "string") {
+    return entry.Category;
+  }
+  if (typeof entry?.Category?.Name === "string") {
+    return entry.Category.Name;
+  }
+  if (typeof entry?.CategoryName === "string") {
+    return entry.CategoryName;
+  }
+  return undefined;
+}
+
+/**
+ * Extracts AirNow AQI category number from different payload shapes.
+ *
+ * @param {any} entry - AirNow payload entry
+ * @returns {number | undefined} Category number when available
+ */
+function airnowCategoryNumber(entry: any): number | undefined {
+  const category =
+    entry?.Category?.Number ?? entry?.CategoryNumber ?? entry?.AQICategory;
+  const parsed = Number(category);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
  * Generates the HTML head section with styles and metadata.
  * Adjusts colors based on time of day.
  *
@@ -315,19 +358,22 @@ async function renderWeather(
 
   // ********************************************************************************************************************
   // parse AirNow response
-  const airnowPM25 = {
+  const airnowPM25: { AQI: number | undefined; category: string | undefined } = {
     AQI: undefined,
     category: undefined,
   };
-  const airnowPM10 = {
+  const airnowPM10: { AQI: number | undefined; category: string | undefined } = {
     AQI: undefined,
     category: undefined,
   };
-  const airnowO3 = {
+  const airnowO3: { AQI: number | undefined; category: string | undefined } = {
     AQI: undefined,
     category: undefined,
   };
-  const airnowOverall = {
+  const airnowOverall: {
+    AQI: number | undefined;
+    category: string | undefined;
+  } = {
     AQI: undefined,
     category: undefined,
   };
@@ -335,19 +381,18 @@ async function renderWeather(
     for (let i = 0; i < airnowSensorData.length; i++) {
       if (i === 0 || airnowSensorData[i]?.AQI > (airnowOverall.AQI ?? -1)) {
         airnowOverall.AQI = airnowSensorData[i]?.AQI;
-        airnowOverall.category = airnowSensorData[i]?.Category.Name;
+        airnowOverall.category = airnowCategoryName(airnowSensorData[i]);
       }
-      let airnowParameterName =
-        airnowSensorData[i]?.ParameterName.toUpperCase();
+      const airnowParameterName = airnowParameter(airnowSensorData[i]) ?? "";
       if (airnowParameterName.includes("PM2.5")) {
         airnowPM25.AQI = airnowSensorData[i]?.AQI;
-        airnowPM25.category = airnowSensorData[i]?.Category.Name;
+        airnowPM25.category = airnowCategoryName(airnowSensorData[i]);
       } else if (airnowParameterName.includes("PM10")) {
         airnowPM10.AQI = airnowSensorData[i]?.AQI;
-        airnowPM10.category = airnowSensorData[i]?.Category.Name;
+        airnowPM10.category = airnowCategoryName(airnowSensorData[i]);
       } else if (airnowParameterName.includes("O3")) {
         airnowO3.AQI = airnowSensorData[i]?.AQI;
-        airnowO3.category = airnowSensorData[i]?.Category.Name;
+        airnowO3.category = airnowCategoryName(airnowSensorData[i]);
       }
     }
   }
@@ -814,13 +859,13 @@ async function renderForecast(
         } else {
           html_content += `</p><p>`;
         }
-        html_content += `${currAirnowData.ParameterName}: ${aqiCategoryToEmoji(
-          currAirnowData.Category.Number,
+        html_content += `${currAirnowData.ParameterName ?? currAirnowData.Parameter ?? "Unknown pollutant"}: ${aqiCategoryToEmoji(
+          airnowCategoryNumber(currAirnowData),
         )}`;
         if (currAirnowData?.AQI > 0) {
           html_content += ` ${currAirnowData.AQI} AQI,`;
         }
-        html_content += ` ${currAirnowData.Category.Name}`;
+        html_content += ` ${airnowCategoryName(currAirnowData) ?? "Unknown category"}`;
       }
     }
     html_content += `</p>`;

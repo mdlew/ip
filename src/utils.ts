@@ -340,7 +340,7 @@ export function timeoutStatusEmoji(fetchSuccess: boolean): string {
  * @param {number} AQI - Air Quality Index value
  * @returns {string} Colored circle emoji (green=good, yellow=moderate, etc.)
  */
-export function aqiToEmoji(AQI: number): string {
+export function aqiToEmoji(AQI: number | undefined): string {
   if (AQI == undefined) {
     return ""; // If undefined, return empty string
   } else if (AQI <= 50) {
@@ -364,7 +364,7 @@ export function aqiToEmoji(AQI: number): string {
  * @param {number} category - AQI category number (1=Good, 2=Moderate, 3=USG, 4=Unhealthy, 5=Very Unhealthy, 6=Hazardous)
  * @returns {string} Colored circle emoji representing the category
  */
-export function aqiCategoryToEmoji(category: number): string {
+export function aqiCategoryToEmoji(category: number | undefined): string {
   if (category == undefined) {
     return ""; // If undefined, return empty string
   } else if (category === 1) {
