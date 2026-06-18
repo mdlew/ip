@@ -150,9 +150,13 @@ function airnowCategoryNumber(
       : undefined;
   const category =
     categoryNumberFromObject ?? entry?.CategoryNumber ?? entry?.AQICategory;
-  const parsed = Number(category);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
+
+  if (category == null || category === "") {
+    return undefined;
+  }
+
+  const parsed = typeof category === "number" ? category : Number(category);
+  return Number.isFinite(parsed) ? parsed : undefined
 
 /**
  * Generates the HTML head section with styles and metadata.
