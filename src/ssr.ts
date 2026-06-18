@@ -91,7 +91,12 @@ const timingLog = {
 
 type AirnowEntry = {
   ParameterName?: string;
+  parameterName?: string;
   Parameter?: string;
+  AQI?: number | string;
+  aqi?: number | string;
+  NowcastAQI?: number | string;
+  nowcastAQI?: number | string;
   Category?:
     | string
     | {
@@ -99,9 +104,59 @@ type AirnowEntry = {
         Number?: number | string;
       };
   CategoryName?: string;
+  categoryName?: string;
+  AqiCategoryName?: string;
+  aqiCategoryName?: string;
   CategoryNumber?: number | string;
+  categoryNumber?: number | string;
   AQICategory?: number | string;
+  aqiCategory?: number | string;
+  ReportingArea?: string;
+  reportingArea?: string;
+  ReportingAreaName?: string;
+  reportingAreaName?: string;
+  StateCode?: string;
+  stateCode?: string;
+  DateObserved?: string;
+  dateObserved?: string;
+  HourObserved?: string;
+  hourObserved?: string;
+  LocalTimeZone?: string;
+  localTimeZone?: string;
+  DateForecast?: string;
+  DateValid?: string;
+  dateForecast?: string;
+  dateValid?: string;
+  ActionDay?: boolean | string;
+  actionDay?: boolean | string;
+  Discussion?: string;
+  discussion?: string;
 };
+
+function airnowString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function airnowNumber(value: unknown): number | undefined {
+  if (value == null || value === "") {
+    return undefined;
+  }
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function airnowBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  return typeof value === "string" && value.toLowerCase() === "true";
+}
+
+function airnowAqi(entry: AirnowEntry | null | undefined): number | undefined {
+  return airnowNumber(
+    entry?.nowcastAQI ?? entry?.NowcastAQI ?? entry?.aqi ?? entry?.AQI,
+  );
+}
 
 /**
  * Extracts a normalized AirNow parameter name from different payload shapes.
@@ -109,8 +164,11 @@ type AirnowEntry = {
  * @param {AirnowEntry | null | undefined} entry - AirNow payload entry
  * @returns {string | undefined} Upper-cased parameter name when available
  */
-function airnowParameter(entry: AirnowEntry | null | undefined): string | undefined {
-  const parameter = entry?.ParameterName ?? entry?.Parameter;
+function airnowParameter(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  const parameter =
+    entry?.parameterName ?? entry?.ParameterName ?? entry?.Parameter;
   return typeof parameter === "string" ? parameter.toUpperCase() : undefined;
 }
 
@@ -126,8 +184,21 @@ function airnowCategoryName(
   if (typeof entry?.Category === "string") {
     return entry.Category;
   }
-  if (typeof entry?.Category?.Name === "string") {
+  if (
+    typeof entry?.Category === "object" &&
+    entry.Category !== null &&
+    typeof entry.Category.Name === "string"
+  ) {
     return entry.Category.Name;
+  }
+  if (typeof entry?.aqiCategoryName === "string") {
+    return entry.aqiCategoryName;
+  }
+  if (typeof entry?.AqiCategoryName === "string") {
+    return entry.AqiCategoryName;
+  }
+  if (typeof entry?.categoryName === "string") {
+    return entry.categoryName;
   }
   if (typeof entry?.CategoryName === "string") {
     return entry.CategoryName;
@@ -149,14 +220,69 @@ function airnowCategoryNumber(
       ? entry.Category.Number
       : undefined;
   const category =
-    categoryNumberFromObject ?? entry?.CategoryNumber ?? entry?.AQICategory;
+    categoryNumberFromObject ??
+    entry?.categoryNumber ??
+    entry?.CategoryNumber ??
+    entry?.aqiCategory ??
+    entry?.AQICategory;
 
-  if (category == null || category === "") {
-    return undefined;
-  }
+  return airnowNumber(category);
+}
 
-  const parsed = typeof category === "number" ? category : Number(category);
-  return Number.isFinite(parsed) ? parsed : undefined;
+function airnowReportingArea(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return (
+    airnowString(entry?.reportingArea) ??
+    airnowString(entry?.ReportingArea) ??
+    airnowString(entry?.reportingAreaName) ??
+    airnowString(entry?.ReportingAreaName)
+  );
+}
+
+function airnowStateCode(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return airnowString(entry?.stateCode) ?? airnowString(entry?.StateCode);
+}
+
+function airnowObservedDate(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return airnowString(entry?.dateObserved) ?? airnowString(entry?.DateObserved);
+}
+
+function airnowObservedHour(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return airnowString(entry?.hourObserved) ?? airnowString(entry?.HourObserved);
+}
+
+function airnowTimeZone(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return airnowString(entry?.localTimeZone) ?? airnowString(entry?.LocalTimeZone);
+}
+
+function airnowForecastDate(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return (
+    airnowString(entry?.dateValid) ??
+    airnowString(entry?.DateValid) ??
+    airnowString(entry?.dateForecast) ??
+    airnowString(entry?.DateForecast)
+  );
+}
+
+function airnowActionDay(entry: AirnowEntry | null | undefined): boolean {
+  return airnowBoolean(entry?.actionDay ?? entry?.ActionDay);
+}
+
+function airnowDiscussion(
+  entry: AirnowEntry | null | undefined,
+): string | undefined {
+  return airnowString(entry?.discussion) ?? airnowString(entry?.Discussion);
 }
 
 /**
@@ -406,23 +532,32 @@ async function renderWeather(
   };
   if (!(airnowSensorData == undefined)) {
     for (let i = 0; i < airnowSensorData.length; i++) {
-      if (i === 0 || airnowSensorData[i]?.AQI > (airnowOverall.AQI ?? -1)) {
-        airnowOverall.AQI = airnowSensorData[i]?.AQI;
-        airnowOverall.category = airnowCategoryName(airnowSensorData[i]);
+      const currentAirnowData = airnowSensorData[i] as AirnowEntry;
+      const currentAirnowAqi = airnowAqi(currentAirnowData);
+      if (
+        currentAirnowAqi != undefined &&
+        (airnowOverall.AQI == undefined ||
+          currentAirnowAqi > airnowOverall.AQI)
+      ) {
+        airnowOverall.AQI = currentAirnowAqi;
+        airnowOverall.category = airnowCategoryName(currentAirnowData);
       }
-      const airnowParameterName = airnowParameter(airnowSensorData[i]);
+      const airnowParameterName = airnowParameter(currentAirnowData);
       if (airnowParameterName == undefined) {
         continue;
       }
       if (airnowParameterName.includes("PM2.5")) {
-        airnowPM25.AQI = airnowSensorData[i]?.AQI;
-        airnowPM25.category = airnowCategoryName(airnowSensorData[i]);
+        airnowPM25.AQI = currentAirnowAqi;
+        airnowPM25.category = airnowCategoryName(currentAirnowData);
       } else if (airnowParameterName.includes("PM10")) {
-        airnowPM10.AQI = airnowSensorData[i]?.AQI;
-        airnowPM10.category = airnowCategoryName(airnowSensorData[i]);
-      } else if (airnowParameterName.includes("O3")) {
-        airnowO3.AQI = airnowSensorData[i]?.AQI;
-        airnowO3.category = airnowCategoryName(airnowSensorData[i]);
+        airnowPM10.AQI = currentAirnowAqi;
+        airnowPM10.category = airnowCategoryName(currentAirnowData);
+      } else if (
+        airnowParameterName.includes("OZONE") ||
+        airnowParameterName.includes("O3")
+      ) {
+        airnowO3.AQI = currentAirnowAqi;
+        airnowO3.category = airnowCategoryName(currentAirnowData);
       }
     }
   }
@@ -557,15 +692,30 @@ async function renderWeather(
     html_content += `<p> Sensor data from <a href="${waqiData.city.url}">${waqiData.city.name}</a>, measured on ${waqiTime}</p>`;
   }
   if (!(airnowSensorData == undefined)) {
-    const firstAirnowSensor = airnowSensorData[0];
+    const firstAirnowSensor = airnowSensorData[0] as AirnowEntry;
+    const reportingArea = airnowReportingArea(firstAirnowSensor) ?? "AirNow";
+    const stateCode = airnowStateCode(firstAirnowSensor);
+    const locationText =
+      stateCode == undefined ? reportingArea : `${reportingArea}, ${stateCode}`;
+    const stateQuery =
+      stateCode == undefined ? "" : `&state=${encodeURIComponent(stateCode)}`;
+    const observedTime = [
+      airnowObservedHour(firstAirnowSensor),
+      airnowTimeZone(firstAirnowSensor),
+    ]
+      .filter((part) => part != undefined)
+      .join(" ");
+    const observedText = [
+      airnowObservedDate(firstAirnowSensor),
+      observedTime.length > 0 ? observedTime : undefined,
+    ]
+      .filter((part) => part != undefined)
+      .join(", ");
+
     html_content += `<p> AirNow data from <a href="https://www.airnow.gov/?city=${encodeURIComponent(
-      firstAirnowSensor.ReportingArea,
-    )}&state=${firstAirnowSensor.StateCode}&country=USA">${
-      firstAirnowSensor.ReportingArea
-    }, ${firstAirnowSensor.StateCode}</a>, measured on ${
-      firstAirnowSensor.DateObserved
-    }, ${firstAirnowSensor.HourObserved}:00 ${
-      firstAirnowSensor.LocalTimeZone
+      reportingArea,
+    )}${stateQuery}&country=USA">${locationText}</a>${
+      observedText.length > 0 ? `, measured on ${observedText}` : ""
     }</p>`;
   }
 
@@ -857,20 +1007,26 @@ async function renderForecast(
   }
 
   if (airnowForecastSuccess) {
-    const firstAirnowForecast = airnowForecastData[0];
+    const firstAirnowForecast = airnowForecastData[0] as AirnowEntry;
+    const reportingArea = airnowReportingArea(firstAirnowForecast) ?? "AirNow";
+    const stateCode = airnowStateCode(firstAirnowForecast);
+    const locationText =
+      stateCode == undefined ? reportingArea : `${reportingArea}, ${stateCode}`;
+    const stateQuery =
+      stateCode == undefined ? "" : `&state=${encodeURIComponent(stateCode)}`;
     html_content += `<h1>AirNow Forecast 🌬️</h1><p> <a href="https://www.airnow.gov/?city=${encodeURIComponent(
-      firstAirnowForecast.ReportingArea,
-    )}&state=${firstAirnowForecast.StateCode}&country=USA">${
-      firstAirnowForecast.ReportingArea
-    }, ${firstAirnowForecast.StateCode}</a></p>`;
+      reportingArea,
+    )}${stateQuery}&country=USA">${locationText}</a></p>`;
     let airnowDateIdx = 0;
     let newDate = true;
     for (let i = 0; i < airnowForecastData.length; i++) {
-      let currAirnowData = airnowForecastData[i];
+      const currAirnowData = airnowForecastData[i] as AirnowEntry;
+      const forecastDate = airnowForecastDate(currAirnowData);
+      const forecastAqi = airnowAqi(currAirnowData);
       // check if we should increment date
       if (
         airnowDateIdx < airnowDateStr.length - 1 &&
-        currAirnowData.DateForecast === airnowDateStr[airnowDateIdx + 1]
+        forecastDate === airnowDateStr[airnowDateIdx + 1]
       ) {
         newDate = true;
         airnowDateIdx++;
@@ -879,10 +1035,10 @@ async function renderForecast(
         }
       }
       // if date matches, then push data to HTML
-      if (currAirnowData?.DateForecast === airnowDateStr[airnowDateIdx]) {
+      if (forecastDate === airnowDateStr[airnowDateIdx]) {
         if (newDate) {
           html_content += `<p> ${dayStr[airnowDateIdx]}: `;
-          if (currAirnowData?.ActionDay) {
+          if (airnowActionDay(currAirnowData)) {
             html_content += `<b>⚠️ Action day ⚠️</b></p><p>`;
           }
           newDate = false;
@@ -892,28 +1048,21 @@ async function renderForecast(
         html_content += `${airnowParameter(currAirnowData) ?? "UNKNOWN POLLUTANT"}: ${aqiCategoryToEmoji(
           airnowCategoryNumber(currAirnowData),
         )}`;
-        if (currAirnowData?.AQI > 0) {
-          html_content += ` ${currAirnowData.AQI} AQI,`;
+        if (forecastAqi != undefined && forecastAqi > 0) {
+          html_content += ` ${forecastAqi} AQI,`;
         }
         html_content += ` ${airnowCategoryName(currAirnowData) ?? "Unknown category"}`;
       }
     }
     html_content += `</p>`;
     // add discussion if available
-    if (
-      !(firstAirnowForecast?.Discussion == undefined) &&
-      !(firstAirnowForecast?.Discussion === "")
-    ) {
-      if (
-        typeof firstAirnowForecast.Discussion === "string" &&
-        URL.canParse(firstAirnowForecast.Discussion)
-      ) {
-        html_content += `<p> <a href="${firstAirnowForecast.Discussion}">Discussion: ${firstAirnowForecast.Discussion}</a></p>`;
+    const discussion = airnowDiscussion(firstAirnowForecast);
+    if (discussion != undefined) {
+      if (URL.canParse(discussion)) {
+        html_content += `<p> <a href="${discussion}">Discussion: ${discussion}</a></p>`;
       } else {
         html_content += `<div class="container"><button class="collapsible" aria-expanded="false" aria-controls="airnow-discussion">Discussion</button><div class="content" id="airnow-discussion"><p>${
-          typeof firstAirnowForecast.Discussion === "string"
-            ? firstAirnowForecast.Discussion.replace(/\n\n/g, "</p><p>")
-            : ""
+          discussion.replace(/\n\n/g, "</p><p>")
         }</p></div></div>`;
       }
     }
