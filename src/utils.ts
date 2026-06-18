@@ -337,7 +337,7 @@ export function timeoutStatusEmoji(fetchSuccess: boolean): string {
 /**
  * Converts an Air Quality Index value to a colored circle emoji.
  *
- * @param {number} AQI - Air Quality Index value
+ * @param {number | undefined} AQI - Air Quality Index value
  * @returns {string} Colored circle emoji (green=good, yellow=moderate, etc.)
  */
 export function aqiToEmoji(AQI: number | undefined): string {
