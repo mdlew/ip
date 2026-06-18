@@ -248,8 +248,8 @@ async function renderWeather(
       "User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
     },
   };
-  // AirNow API setup https://docs.airnowapi.org/CurrentObservationsByLatLon/query
-  const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${user.latitude}&longitude=${user.longitude}&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+  // AirNow API setup https://docs.airnowapi.org/ObservationsByZipCodeLatLon/query
+  const airnowSensorRequestUrl = `https://www.airnowapi.org/aq/observation/current/ziplatlong/?format=application/json&latitude=${user.latitude}&longitude=${user.longitude}&API_KEY=${env.AIRNOW_KEY}`;
   const airnowRequestInit = {
     headers: {
       "content-type": "application/json;charset=UTF-8",
@@ -570,7 +570,8 @@ async function renderForecast(
       "User-Agent": env.NWS_AGENT, // ID to send to weather.gov API
     },
   };
-  const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/latLong/?format=application/json&latitude=${user.latitude}&longitude=${user.longitude}&date=&distance=75&API_KEY=${env.AIRNOW_KEY}`;
+  // AirNow API https://docs.airnowapi.org/CurrentForecasts/query
+  const airnowForecastRequestUrl = `https://www.airnowapi.org/aq/forecast/current/?format=application/json&latitude=${user.latitude}&longitude=${user.longitude}&API_KEY=${env.AIRNOW_KEY}`;
   const airnowRequestInit = {
     headers: {
       "content-type": "application/json;charset=UTF-8",
