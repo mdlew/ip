@@ -361,7 +361,7 @@ export function aqiToEmoji(AQI: number | undefined): string {
 /**
  * Converts an AQI category number (1-6) to a colored circle emoji.
  *
- * @param {number} category - AQI category number (1=Good, 2=Moderate, 3=USG, 4=Unhealthy, 5=Very Unhealthy, 6=Hazardous)
+ * @param {number | undefined} category - AQI category number (1=Good, 2=Moderate, 3=USG, 4=Unhealthy, 5=Very Unhealthy, 6=Hazardous)
  * @returns {string} Colored circle emoji representing the category
  */
 export function aqiCategoryToEmoji(category: number | undefined): string {
