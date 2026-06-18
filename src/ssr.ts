@@ -156,7 +156,8 @@ function airnowCategoryNumber(
   }
 
   const parsed = typeof category === "number" ? category : Number(category);
-  return Number.isFinite(parsed) ? parsed : undefined
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 /**
  * Generates the HTML head section with styles and metadata.
