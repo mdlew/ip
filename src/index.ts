@@ -138,7 +138,7 @@ export default {
       }
     }
 
-    // Check if the request is secure (HTTPS) and TLS version is 1.3 or higher, return 403 if not
+    // Check if the request is secure (HTTPS) and TLS version is 1.3 or higher
     if (
       typeof request.cf?.tlsVersion !== "string" ||
       !request.cf.tlsVersion.toUpperCase().includes("TLSV1.3")
@@ -146,10 +146,13 @@ export default {
       console.log({
         error: `TLS version error: "${request.cf?.tlsVersion}"`,
       });
-      return new Response("Please use TLS version 1.3 or higher.", {
-        status: 403,
-        statusText: "Forbidden",
-      });
+      // return a 403 response only if tlsVersion is available, otherwise just ignore this check
+      if (typeof request.cf?.tlsVersion == "string") {
+        return new Response("Please use TLS version 1.3 or higher.", {
+          status: 403,
+          statusText: "Forbidden",
+        });
+      }
     }
 
     // Only GET requests work with this proxy.
