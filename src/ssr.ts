@@ -47,8 +47,6 @@ interface Env {
   NWS_AGENT: string;
   /** API key for AirNow air quality service */
   AIRNOW_KEY: string;
-  /** Fetcher binding for serving static assets */
-  ASSETS: Fetcher;
 }
 
 const intFormatTwoDigit = new Intl.NumberFormat("en-US", {
@@ -314,31 +312,13 @@ function renderHead(): string {
     focusColor = "black";
   }
 
-  const html_style = `@font-face {
-  font-family: "Source Sans 3";
-  src:
-    local("Source Sans 3"), local("Source Sans Pro"),
-    url("/SourceSans3-Regular.otf.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
- }
- @font-face {
-  font-family: "Source Sans 3";
-  src:
-    local("Source Sans 3 Bold"), local("Source Sans Pro Bold"),
-    url("/SourceSans3-Bold.otf.woff2") format("woff2");
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
- }
- body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
+  const html_style = `body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
    hour,
  )};}
  img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%; background-color: ${containerBg};}
  footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem); background-color: ${containerBg};}
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${accentColor}; text-decoration: underline dotted;}
- .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
+ .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
  .collapsible:focus-visible {outline: 3px solid ${focusColor}; outline-offset: 2px;}
  .active, .collapsible:hover {background-color: #59230B;}
  .collapsible:after {content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
