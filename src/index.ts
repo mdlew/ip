@@ -178,8 +178,8 @@ export default {
       console.log({
         error: `HTTP protocol error: "${request.cf?.httpProtocol}"`,
       });
-      // return a 403 response only if httpProtocol is available, otherwise just ignore this check
-      if (typeof request.cf?.httpProtocol == "string") {
+      // return a 403 response only if httpProtocol is available and asn is not cloudflare, otherwise just ignore this check
+      if (typeof request.cf?.httpProtocol == "string" && request.cf?.asn !== 13335) {
         return new Response("Please use HTTP/2 or HTTP/3.", {
           status: 403,
           statusText: "Forbidden",
@@ -195,8 +195,8 @@ export default {
       console.log({
         error: `TLS version error: "${request.cf?.tlsVersion}"`,
       });
-      // return a 403 response only if tlsVersion is available, otherwise just ignore this check
-      if (typeof request.cf?.tlsVersion == "string") {
+      // return a 403 response only if tlsVersion is available and asn is not cloudflare, otherwise just ignore this check
+      if (typeof request.cf?.tlsVersion == "string" && request.cf?.asn !== 13335) {
         return new Response("Please use TLS version 1.3 or higher.", {
           status: 403,
           statusText: "Forbidden",
