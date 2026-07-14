@@ -12,21 +12,29 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Resolve pnpm version
+        id: pnpm-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(npm view pnpm version)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: latest
+          version: ${{ steps['pnpm-version'].outputs.version }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
-          cache: 'pnpm'
+          node-version: "lts/*"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --force --fix-lockfile --no-frozen-lockfile
@@ -36,7 +44,7 @@ jobs:
 
       - name: Build
         run: pnpm run build
-        
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v4
         with:
@@ -58,4 +66,3 @@ jobs:
           path: |
             ~/**/pnpm-lock.yaml
             ~/**/worker-configuration.d.ts
-            
