@@ -142,7 +142,7 @@ export default {
         "default-src 'none'",
         `script-src 'nonce-${nonce}' 'strict-dynamic'`,
         `style-src 'nonce-${nonce}' https://unpkg.com`,
-        "connect-src 'self' https://unpkg.com https://tiles.stadiamaps.com",
+        "connect-src 'self' https://tiles.stadiamaps.com",
         "worker-src 'self' blob: https://unpkg.com",
         "img-src 'self' data: blob:",
         "frame-src 'none'",
