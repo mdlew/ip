@@ -336,7 +336,6 @@ function renderHead(): string {
   <link rel="apple-touch-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://tiles.stadiamaps.com" />
-  <script nonce="${user.nonce}" type="text/javascript" src="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="//unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
   <style nonce="${user.nonce}" type="text/css"> ${html_style} </style>
 </head>
@@ -369,7 +368,9 @@ function renderGeolocation(request: Request): string {
   <p> City: ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a>: ${request.cf?.metroCode}</p>
   <p> <a href="https://en.wikipedia.org/wiki/ISO_3166-2">Region</a>: ${request.cf?.region}, RegionCode: ${request.cf?.regionCode}, PostalCode: ${request.cf?.postalCode}</p>
   <p> Country: ${request.cf?.country},  Continent: ${request.cf?.continent}</p>
-  <script nonce="${user.nonce}" type="text/javascript">
+  <script nonce="${user.nonce}" type="module">
+    import * as maplibregl from 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.mjs';
+
     var map = new maplibregl.Map({
       container: 'map',
       style: 'https://tiles.stadiamaps.com/styles/outdoors.json',  // Style URL; see our documentation for more options
