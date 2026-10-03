@@ -365,7 +365,7 @@ function renderGeolocation(request: Request): string {
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <div id="map"></div>
   <p> <a href="https://www.openstreetmap.org/?mlat=${user.latitude}&amp;mlon=${user.longitude}#map=11/${user.latitude}/${user.longitude}">(${user.latitude}, ${user.longitude})</a>, Timezone: ${user.timezone}</p>
-  <p> ${request.cf?.city} (<a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a> ${request.cf?.metroCode}), <a href="https://en.wikipedia.org/wiki/ISO_3166-2">${request.cf?.region}</a> ${request.cf?.regionCode} ${request.cf?.postalCode}</p>
+  <p> ${request.cf?.city}, <a href="https://en.wikipedia.org/wiki/ISO_3166-2">${request.cf?.region}</a> (${request.cf?.regionCode}) ${request.cf?.postalCode} (<a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a> ${request.cf?.metroCode})</p>
   <p> Country: ${request.cf?.country},  Continent: ${request.cf?.continent}</p>
   <script nonce="${user.nonce}" type="module">
     import * as maplibregl from 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.mjs';
