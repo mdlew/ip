@@ -75,6 +75,8 @@ const user = {
   latitude: "40.712778", // default to NYC
   longitude: "-74.006111", // default to NYC
   miPerKm: 0.621371, // miles per kilometer
+  country: "US", // default to US
+  continent: "NA", // default to North America
   nonce: "", // nonce for CSP
 };
 
@@ -261,7 +263,9 @@ function airnowObservedHour(
 function airnowTimeZone(
   entry: AirnowEntry | null | undefined,
 ): string | undefined {
-  return airnowString(entry?.localTimeZone) ?? airnowString(entry?.LocalTimeZone);
+  return (
+    airnowString(entry?.localTimeZone) ?? airnowString(entry?.LocalTimeZone)
+  );
 }
 
 function airnowForecastDate(
@@ -315,8 +319,8 @@ function renderHead(): string {
   }
 
   const html_style = `body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
-   hour,
- )};}
+    hour,
+  )};}
  img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%; background-color: ${containerBg};}
  footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem); background-color: ${containerBg};}
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} a {color: ${accentColor};} a:hover {color: ${accentColor}; text-decoration: underline dotted;}
@@ -367,8 +371,8 @@ function renderGeolocation(request: Request): string {
   <p> ISP: ${clientISP}, ASN: ${clientASN} (<a href="https://radar.cloudflare.com/quality/as${clientASN}">Cloudflare radar</a>)</p>
   <div id="map"></div>
   <p> <a href="https://www.openstreetmap.org/?mlat=${user.latitude}&amp;mlon=${user.longitude}#map=11/${user.latitude}/${user.longitude}">(${user.latitude}, ${user.longitude})</a>, Timezone: ${user.timezone}</p>
-  <p> ${request.cf?.city}, ${request.cf?.region} (<a href="https://en.wikipedia.org/wiki/ISO_3166-2:${request.cf?.country}">${request.cf?.regionCode}</a>) ${request.cf?.postalCode} (<a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a> ${request.cf?.metroCode})</p>
-  <p> Country: <a href="https://en.wikipedia.org/wiki/ISO_3166-2:${request.cf?.country}">${request.cf?.country} ${countryCodeToEmoji(request.cf?.country)}</a>,  Continent: ${request.cf?.continent} ${continentCodeToEmoji(request.cf?.continent)}</p>
+  <p> ${request.cf?.city}, ${request.cf?.region} (<a href="https://en.wikipedia.org/wiki/ISO_3166-2:${user.country}">${request.cf?.regionCode}</a>) ${request.cf?.postalCode} (<a href="https://en.wikipedia.org/wiki/List_of_television_stations_in_North_America_by_media_market">US DMA Code</a> ${request.cf?.metroCode})</p>
+  <p> Country: <a href="https://en.wikipedia.org/wiki/ISO_3166-2:${user.country}">${user.country} ${countryCodeToEmoji(user.country)}</a>,  Continent: ${user.continent} ${continentCodeToEmoji(user.continent)}</p>
   <script nonce="${user.nonce}" type="module">
     import * as maplibregl from 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.mjs';
 
@@ -441,14 +445,14 @@ async function renderWeather(
       fetchProducts(
         nwsPointsRequestUrl,
         nwsRequestInit,
-        typeof request.cf?.country === "string" &&
-          request.cf?.country.toUpperCase().includes("US"),
+        typeof user.country === "string" &&
+          user.country.toUpperCase().includes("US"),
       ),
       fetchProducts(
         airnowSensorRequestUrl,
         airnowRequestInit,
-        typeof request.cf?.country === "string" &&
-          request.cf?.country.toUpperCase().includes("US"),
+        typeof user.country === "string" &&
+          user.country.toUpperCase().includes("US"),
       ),
     ]);
   } catch (e) {
@@ -490,14 +494,16 @@ async function renderWeather(
 
   // ********************************************************************************************************************
   // parse AirNow response
-  const airnowPM25: { AQI: number | undefined; category: string | undefined } = {
-    AQI: undefined,
-    category: undefined,
-  };
-  const airnowPM10: { AQI: number | undefined; category: string | undefined } = {
-    AQI: undefined,
-    category: undefined,
-  };
+  const airnowPM25: { AQI: number | undefined; category: string | undefined } =
+    {
+      AQI: undefined,
+      category: undefined,
+    };
+  const airnowPM10: { AQI: number | undefined; category: string | undefined } =
+    {
+      AQI: undefined,
+      category: undefined,
+    };
   const airnowO3: { AQI: number | undefined; category: string | undefined } = {
     AQI: undefined,
     category: undefined,
@@ -515,8 +521,7 @@ async function renderWeather(
       const currentAirnowAqi = airnowAqi(currentAirnowData);
       if (
         currentAirnowAqi != undefined &&
-        (airnowOverall.AQI == undefined ||
-          currentAirnowAqi > airnowOverall.AQI)
+        (airnowOverall.AQI == undefined || currentAirnowAqi > airnowOverall.AQI)
       ) {
         airnowOverall.AQI = currentAirnowAqi;
         airnowOverall.category = airnowCategoryName(currentAirnowData);
@@ -1040,9 +1045,10 @@ async function renderForecast(
       if (URL.canParse(discussion)) {
         html_content += `<p> <a href="${discussion}">Discussion: ${discussion}</a></p>`;
       } else {
-        html_content += `<div class="container"><button class="collapsible" aria-expanded="false" aria-controls="airnow-discussion">Discussion</button><div class="content" id="airnow-discussion"><p>${
-          discussion.replace(/\n\n/g, "</p><p>")
-        }</p></div></div>`;
+        html_content += `<div class="container"><button class="collapsible" aria-expanded="false" aria-controls="airnow-discussion">Discussion</button><div class="content" id="airnow-discussion"><p>${discussion.replace(
+          /\n\n/g,
+          "</p><p>",
+        )}</p></div></div>`;
       }
     }
   }
@@ -1211,6 +1217,10 @@ export async function renderPage(
     typeof request.cf?.longitude === "string"
       ? request.cf.longitude
       : "-74.006111"; // default to NYC
+  user.country =
+    typeof request.cf?.country === "string" ? request.cf.country : "US"; // default to US
+  user.continent =
+    typeof request.cf?.continent === "string" ? request.cf.continent : "NA"; // default to North America
   user.nonce = nonce;
 
   const encoder = new TextEncoder();
