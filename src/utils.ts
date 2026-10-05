@@ -708,3 +708,36 @@ export function countryCodeToEmoji(countryCode?: string | null): string {
     ...[...code].map((char) => 0x1f1e6 + char.charCodeAt(0) - 0x41),
   );
 }
+
+export function continentCodeToEmoji(continentCode?: string | null): string {
+  const code = continentCode?.trim().toUpperCase();
+
+  if (continentCode === undefined) {
+    return "";
+  }
+  let emoji = "";
+  switch (code) {
+    case "AF":
+      emoji = "🌍"; // Africa
+      break;
+    case "AN":
+      emoji = ""; // Antarctica
+      break;
+    case "AS":
+      emoji = "🌏"; // Asia
+      break;
+    case "EU":
+      emoji = "🌍"; // Europe
+      break;
+    case "NA":
+      emoji = "🌎"; // North America
+      break;
+    case "SA":
+      emoji = "🌎"; // South America
+      break;
+    case "OC":
+      emoji = "🌏"; // Oceania
+      break;
+  }
+  return emoji;
+}
