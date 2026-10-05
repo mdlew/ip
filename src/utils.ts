@@ -696,3 +696,15 @@ export function userAgentIcon(userAgentStr: string): string {
   }
   return userAgentIcons;
 }
+
+export function countryCodeToEmoji(countryCode?: string | null): string {
+  const code = countryCode?.trim().toUpperCase();
+
+  if (!code || code === "XX" || code === "T1" || !/^[A-Z]{2}$/.test(code)) {
+    return "";
+  }
+
+  return String.fromCodePoint(
+    ...[...code].map((char) => 0x1f1e6 + char.charCodeAt(0) - 0x41),
+  );
+}
