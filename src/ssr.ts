@@ -324,8 +324,8 @@ function renderHead(): string {
  img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%; background-color: ${containerBg};}
  footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem); background-color: ${containerBg};}
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} 
- a {color: ${textColor}; text-decoration: underline transparent; text-underline-offset: 3px; transition: color 0.2s ease, text-decoration-color 0.2s ease, text-underline-offset 0.2s ease;} 
- a:hover {color: ${accentColor}; text-decoration: underline solid ${accentColor}; text-decoration-thickness: 2px; text-underline-offset: 5px;}
+ a {color: ${accentColor}; text-decoration: underline transparent; text-underline-offset: 3px; transition: color 0.2s ease, text-decoration-color 0.2s ease, text-underline-offset 0.2s ease;} 
+ a:hover {color: ${textColor}; text-decoration: underline solid ${textColor}; text-decoration-thickness: 2px; text-underline-offset: 5px;}
  .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
  .collapsible:focus-visible {outline: 3px solid ${focusColor}; outline-offset: 2px;}
  .active, .collapsible:hover {background-color: #59230B;}
