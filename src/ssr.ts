@@ -308,14 +308,23 @@ function renderHead(): string {
   // gradient palettes.  45% black darkens warm sunset stops enough for white text
   // to pass; 25% white lifts the darker noon-to-dusk stops enough for black text.
   let containerBg = "rgba(0, 0, 0, 0.45)";
-  // Focus ring must contrast with both the dark button bg (#8A3B12) and the overlay.
+  // Focus ring must contrast with both the collapsible bg and the overlay.
   let focusColor = "white";
+  // Collapsible colours are opaque so contrast never depends on the time-of-day gradient.
+  // Night: dark warm brown with cream text (~14:1); hover is lighter brown (~10:1).
+  let collapsibleBg = "#2B1D12";
+  let collapsibleHoverBg = "#4A3220";
+  let collapsibleText = "#fff4cc";
   if (hour >= 7 && hour < 18) {
     // Daytime (7 am – 5 pm): black text on lighter gradient.
     accentColor = "#080808";
     textColor = "black";
     containerBg = "rgba(255, 255, 255, 0.25)";
     focusColor = "black";
+    // Day: light cream with dark brown text (~14:1); hover is deeper amber (~11:1).
+    collapsibleBg = "#FFF1D6";
+    collapsibleHoverBg = "#FFDFA3";
+    collapsibleText = "#2B1D12";
   }
 
   const html_style = `body {padding:2em; font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif; color:${textColor}; margin:0 !important; height:100%; font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem); background: ${toCSSGradient(
@@ -326,11 +335,11 @@ function renderHead(): string {
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} 
  a {color: ${accentColor}; text-decoration: underline; text-decoration-color: ${accentColor}; text-underline-offset: 3px; text-decoration-thickness: 1px; transition: text-underline-offset 0.2s ease, text-decoration-thickness 0.2s ease;}
  a:hover {text-underline-offset: 5px; text-decoration-thickness: 2.5px;}
- .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
+ .collapsible {background-color: ${collapsibleBg};  color: ${collapsibleText};  font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
  .collapsible:focus-visible {outline: 3px solid ${focusColor}; outline-offset: 2px;}
- .active, .collapsible:hover {background-color: #59230B;}
- .collapsible:after {content: '➕';  color: white;  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
- .content {padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: white;  background-color: #8A3B12;}
+ .active, .collapsible:hover {background-color: ${collapsibleHoverBg};}
+ .collapsible:after {content: '➕';  color: ${collapsibleText};  font-weight: bold;  float: right;  margin-left: 5px;} .active:after {content: '➖';}
+ .content {padding: 0 18px;  max-height: 0;  overflow: hidden;  transition: max-height 0.2s ease-out;  color: ${collapsibleText};  background-color: ${collapsibleBg};}
  .container { display: inline-block; padding: 6px; } .container img { display: block; } .container:focus-visible { outline: 3px solid ${accentColor}; outline-offset: 2px; border-radius: 6px; }
  #map {width: 100%; height: 350px;}`;
   const html_head = `<!DOCTYPE html>
