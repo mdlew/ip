@@ -301,7 +301,7 @@ function renderHead(): string {
 
   const hour = user.localizedDate.getHours();
   // Night-time defaults (hours 0–6 and 18–23): white text on dark gradient.
-  let accentColor = "white";
+  let accentColor = "#fff4cc";
   let textColor = "white";
   // Semi-transparent container overlay guarantees the chosen textColor achieves
   // ≥4.5:1 (normal text) against the worst-case blended colour across all 24
@@ -312,7 +312,7 @@ function renderHead(): string {
   let focusColor = "white";
   if (hour >= 7 && hour < 18) {
     // Daytime (7 am – 5 pm): black text on lighter gradient.
-    accentColor = "black";
+    accentColor = "#080808";
     textColor = "black";
     containerBg = "rgba(255, 255, 255, 0.25)";
     focusColor = "black";
@@ -324,8 +324,8 @@ function renderHead(): string {
  img {max-width: 100%; height: auto;} #container {display: flex; flex-direction:column;min-height: 100%; background-color: ${containerBg};}
  footer {padding: 3px; font-size:clamp(0.8rem, 0.96rem + 0.18vw, 1rem); background-color: ${containerBg};}
  h1, h2, h3 {color: ${accentColor};} p{margin: 0.3em;} 
- a {color: ${accentColor}; text-decoration: underline; text-decoration-color: ${accentColor}; text-underline-offset: 3px; text-decoration-thickness: 1px; transition: opacity 0.2s ease, text-underline-offset 0.2s ease, text-decoration-thickness 0.2s ease;} 
- a:hover {opacity: 0.75; text-underline-offset: 5px; text-decoration-thickness: 2.5px;}
+ a {color: ${accentColor}; text-decoration: underline; text-decoration-color: ${accentColor}; text-underline-offset: 3px; text-decoration-thickness: 1px; transition: text-underline-offset 0.2s ease, text-decoration-thickness 0.2s ease;}
+ a:hover {text-underline-offset: 5px; text-decoration-thickness: 2.5px;}
  .collapsible {background-color: #8A3B12;  color: white;  font-family:'Source Sans 3','Source Sans Pro',system-ui,sans-serif;  font-size:clamp(1rem, 0.96rem + 0.18vw, 1.125rem);  cursor: pointer;  padding: 18px;  width: 100%;  border: none;  text-align: left;}
  .collapsible:focus-visible {outline: 3px solid ${focusColor}; outline-offset: 2px;}
  .active, .collapsible:hover {background-color: #59230B;}
