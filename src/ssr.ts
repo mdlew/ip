@@ -301,7 +301,7 @@ function renderHead(): string {
 
   const hour = user.localizedDate.getHours();
   // Night-time defaults (hours 0–6 and 18–23): white text on dark gradient.
-  let accentColor = "#fff4cc";
+  let accentColor = '#fff4cc';
   let textColor = "white";
   // Semi-transparent container overlay guarantees the chosen textColor achieves
   // ≥4.5:1 (normal text) against the worst-case blended colour across all 24
