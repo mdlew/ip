@@ -317,7 +317,7 @@ function renderHead(): string {
   let collapsibleText = "#fff4cc";
   if (hour >= 7 && hour < 18) {
     // Daytime (7 am – 5 pm): black text on lighter gradient.
-    accentColor = "#080808";
+    accentColor = "#2B1D12";
     textColor = "black";
     containerBg = "rgba(255, 255, 255, 0.25)";
     focusColor = "black";
