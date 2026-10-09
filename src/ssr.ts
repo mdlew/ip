@@ -316,11 +316,11 @@ if (isDay) {
   /*
    * Daytime palette
    *
-   * Dark blue-green text over a lightly frosted background.
+   * Black text over a lightly frosted background.
    * The collapsible controls use cyan colors taken directly
    * from the daytime gradients.
    */
-  textColor = "#163C52";
+  textColor = "#000000";
   headingColor = "#154277";
   linkColor = "#154277";
   linkHoverColor = "#1E528E";
