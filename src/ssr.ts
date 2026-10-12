@@ -1162,7 +1162,7 @@ async function renderForecast(
     }
     // parse forecast data
     if (nwsForecastSuccess) {
-      for (let i = 0; i < Math.min(5, nwsForecastData.periods.length); i++) {
+      for (let i = 0; i < Math.min(6, nwsForecastData.periods.length); i++) {
         html_content += `<p> ${
           nwsForecastData.periods[i].name
         }: ${nwsForecastIconToEmoji(nwsForecastData.periods[i].icon)} ${
