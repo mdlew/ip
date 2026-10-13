@@ -23,6 +23,7 @@ import {
   continentCodeToEmoji,
   countryCodeToEmoji,
   dewPointEmoji,
+  tempToEmoji,
   fetchProducts,
   lat2y,
   lon2x,
@@ -329,7 +330,7 @@ if (isDay) {
 
   collapsibleBg = "#B7EAFF";
   collapsibleHoverBg = "#94DFFF";
-  collapsibleText = "#163C52";
+  collapsibleText = "#000000";
 
   focusColor = "#1E528E";
 } else {
@@ -349,7 +350,7 @@ if (isDay) {
 
   collapsibleBg = "#20202C";
   collapsibleHoverBg = "#3A3A52";
-  collapsibleText = "#EAB0D1";
+  collapsibleText = "#FFFFFF";
 
   focusColor = "#94DFFF";
 }
@@ -755,13 +756,13 @@ async function renderWeather(
   // if within range, print heat index
   //if (tempF > 80 && humidity > 40) {
   if (heatIndex > 80) {
-    html_content += `<p> Feels like: ${floatFormat.format(
+    html_content += `<p> Feels like: ${tempToEmoji(heatIndex)} ${floatFormat.format(
       heatIndex,
     )} °F (<a href="https://www.weather.gov/safety/heat-index">heat index</a>)</p>`;
   }
   // if within range, print wind chill
   if (windChill < 40) {
-    html_content += `<p> Feels like: ${floatFormat.format(
+    html_content += `<p> Feels like: ${tempToEmoji(windChill)} ${floatFormat.format(
       windChill,
     )} °F (<a href="https://www.weather.gov/safety/cold-wind-chill-chart">wind chill</a>)</p>`;
   }
@@ -1141,13 +1142,13 @@ async function renderForecast(
       )} °C)</p>`;
       // if hot enough, print heat index
       if (!isNaN(heatIndex) && heatIndex > 80) {
-        html_content += `<p> Feels like: ${floatFormat.format(
+        html_content += `<p> Feels like: ${tempToEmoji(heatIndex)} ${floatFormat.format(
           heatIndex,
         )} °F</p>`;
       }
       // if chilly enough, print wind chill
       if (!isNaN(windChill) && windChill < 40) {
-        html_content += `<p> Feels like: ${floatFormat.format(
+        html_content += `<p> Feels like: ${tempToEmoji(windChill)} ${floatFormat.format(
           windChill,
         )} °F</p>`;
       }

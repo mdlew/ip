@@ -306,6 +306,38 @@ export function dewPointEmoji(dewPointF: number): string {
   }
 }
 
+export function tempToEmoji(tempF: number): string {
+  if (Number.isNaN(tempF)) {
+    return "";
+  }
+
+  if (tempF < 20) {
+    return "🥶"; // Bitter cold
+  }
+
+  if (tempF <= 32) {
+    return "❄️"; // Freezing
+  }
+
+  if (tempF < 50) {
+    return "🧥"; // Cold
+  }
+
+  if (tempF < 65) {
+    return "🙂"; // Cool
+  }
+
+  if (tempF < 80) {
+    return "😎"; // Pleasant or warm
+  }
+
+  if (tempF < 90) {
+    return "🥵"; // Hot
+  }
+
+  return "🔥"; // Very hot
+}
+
 /**
  * Returns a success or error emoji based on fetch status.
  *
